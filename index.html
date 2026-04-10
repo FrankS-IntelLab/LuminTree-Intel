@@ -59,19 +59,16 @@
         <p>Select a node from the tree to start discussing your novel.</p>
       </div>
 
-      <!-- Chat area -->
+      <!-- Editor area -->
       <div id="chat-area" class="hidden">
         <div class="chat-header">
           <span id="chat-breadcrumb"></span>
         </div>
         <div id="chat-snippet" class="snippet"></div>
-        <div id="chat-messages"></div>
-        <div class="chat-input-row">
-          <input type="text" id="chat-input" placeholder="Discuss plot, characters, worldbuilding...">
-          <button id="voice-btn" class="voice-btn" title="Voice input">🎤</button>
-          <button id="chat-send">Send</button>
+        <div class="editor-section">
+          <textarea id="node-editor" placeholder="Write your notes, plot details, character descriptions..."></textarea>
+          <button id="editor-save" class="editor-save-btn">💾 Save</button>
         </div>
-        <button id="branch-btn" class="branch-btn hidden">🌿 Branch selected text as child node</button>
       </div>
 
       <!-- Preview panel -->

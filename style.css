@@ -74,6 +74,12 @@ body {
 .tree-row.last-read { border-left: 3px solid #1a73e8; background: #e8f0fe; }
 .tree-row.prev-read { border-left: 3px solid #90caf9; background: #f5f9ff; }
 .tree-del:hover { color: #e53935; }
+.tree-add {
+  background: none; border: 1px solid #a5d6a7; color: #2e7d32; font-size: 12px; cursor: pointer;
+  padding: 0 4px; visibility: hidden; flex-shrink: 0; border-radius: 3px; font-weight: bold;
+}
+.tree-row:hover .tree-add { visibility: visible; }
+.tree-add:hover { background: #e8f5e9; }
 
 /* Fixed category root nodes — visually distinct */
 .tree-row.category-root { background: #f0f4ff; font-weight: 600; border-bottom: 1px solid #d0daf0; }
@@ -92,9 +98,22 @@ body {
 }
 .tree-children { margin-left: 4px; border-left: 1px solid #ddd; }
 
-/* Chat */
+/* Chat / Editor */
 #chat-area { flex: 1; display: flex; flex-direction: column; }
 .chat-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+
+/* Editor */
+.editor-section { flex: 1; display: flex; flex-direction: column; gap: 8px; }
+#node-editor {
+  flex: 1; width: 100%; resize: none; padding: 10px; border: 1px solid #ddd; border-radius: 6px;
+  font-family: inherit; font-size: 13px; line-height: 1.6; box-sizing: border-box;
+}
+#node-editor:focus { outline: none; border-color: #1a73e8; }
+.editor-save-btn {
+  align-self: flex-end; background: #1a73e8; color: #fff; border: none; border-radius: 4px;
+  padding: 6px 16px; font-size: 12px; cursor: pointer;
+}
+.editor-save-btn:hover { background: #1558b0; }
 .chat-header button { background: none; border: 1px solid #ccc; border-radius: 4px; padding: 4px 8px; font-size: 12px; cursor: pointer; }
 #chat-breadcrumb { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 

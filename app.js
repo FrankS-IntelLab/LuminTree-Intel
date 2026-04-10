@@ -6,11 +6,8 @@ const treeEl = document.getElementById("tree");
 const treeView = document.getElementById("tree-view");
 const settingsEl = document.getElementById("settings");
 const chatArea = document.getElementById("chat-area");
-const chatMessages = document.getElementById("chat-messages");
 const chatSnippet = document.getElementById("chat-snippet");
-const chatInput = document.getElementById("chat-input");
 const chatBreadcrumb = document.getElementById("chat-breadcrumb");
-const branchBtn = document.getElementById("branch-btn");
 const statusEl = document.getElementById("settings-status");
 
 // --- Fixed Category Definitions ---
@@ -37,8 +34,6 @@ const CATEGORY_PROMPTS = {
 let nodes = [];
 let activeNodeId = null;
 let targetParentId = null;
-let conversationHistory = [];
-let isVoiceInput = false;
 
 function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
@@ -273,6 +268,17 @@ function renderNodeEl(node, depth) {
     renderTree();
   });
 
+  // Add child button
+  const addChild = document.createElement("button");
+  addChild.className = "tree-add";
+  addChild.textContent = "+";
+  addChild.title = "Add child node";
+  addChild.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const title = prompt("Enter node title:");
+    if (title && title.trim()) addNode(title.trim(), node.id);
+  });
+
   const del = document.createElement("button");
   del.className = "tree-del";
   del.textContent = "✕";
@@ -289,6 +295,7 @@ function renderNodeEl(node, depth) {
   row.appendChild(exp);
   row.appendChild(dl);
   row.appendChild(jsonDl);
+  row.appendChild(addChild);
   row.appendChild(pin);
   row.appendChild(del);
   wrap.appendChild(row);
@@ -303,7 +310,7 @@ function renderNodeEl(node, depth) {
   return wrap;
 }
 
-// --- Chat (novel creation AI agent) ---
+// --- Editor (note-taking for each node) ---
 
 function openChat(nodeId) {
   const node = findNode(nodeId);
@@ -311,207 +318,36 @@ function openChat(nodeId) {
   activeNodeId = nodeId;
   node.lastAccessedAt = new Date().toISOString();
   saveTree();
-  conversationHistory = node.chatHistory.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp }));
 
   const ancestors = getAncestors(nodeId);
   chatBreadcrumb.textContent = ancestors.map(n => truncate(n.title, 20)).join(" → ");
-  chatSnippet.textContent = node.fullText;
-  chatMessages.innerHTML = "";
-  node.chatHistory.forEach(m => appendMsg(m.role, m.content, false, m.timestamp));
+  chatSnippet.textContent = node.isCategory ? node.fullText : node.title;
 
-  // Show chat in right panel (tree stays visible)
+  // Load node content into editor
+  const editor = document.getElementById("node-editor");
+  editor.value = node.fullText || "";
+
+  // Show editor in right panel (tree stays visible)
   document.getElementById("right-empty").classList.add("hidden");
   chatArea.classList.remove("hidden");
   document.getElementById("preview-area").classList.add("hidden");
-  branchBtn.classList.add("hidden");
-  chatInput.focus();
+  editor.focus();
 }
 
-document.getElementById("chat-send").addEventListener("click", sendMessage);
-chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
-
-// --- Voice Input (Web Speech API, runs directly in page) ---
-
-const voiceBtn = document.getElementById("voice-btn");
-let recognition = null;
-
-voiceBtn.addEventListener("click", () => {
-  if (recognition) { recognition.stop(); return; }
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SR) { alert("Speech recognition not supported in this browser."); return; }
-
-  recognition = new SR();
-  recognition.continuous = true;
-  recognition.interimResults = true;
-  recognition.lang = "en-US";
-
-  let finalTranscript = "";
-  voiceBtn.classList.add("recording");
-  voiceBtn.textContent = "⏹";
-
-  recognition.onresult = (e) => {
-    let interim = "";
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
-      else interim += e.results[i][0].transcript;
-    }
-    chatInput.value = finalTranscript + interim;
-  };
-
-  recognition.onend = () => {
-    voiceBtn.classList.remove("recording");
-    voiceBtn.textContent = "🎤";
-    recognition = null;
-    if (finalTranscript.trim()) {
-      isVoiceInput = true;
-      sendMessage();
-    }
-  };
-
-  recognition.onerror = () => {
-    voiceBtn.classList.remove("recording");
-    voiceBtn.textContent = "🎤";
-    recognition = null;
-  };
-
-  recognition.start();
-});
-
-// Branch from selected text in chat
-chatMessages.addEventListener("mouseup", () => {
-  const sel = window.getSelection().toString().trim();
-  branchBtn.classList.toggle("hidden", sel.length === 0);
-});
-
-branchBtn.addEventListener("click", () => {
-  const sel = window.getSelection().toString().trim();
-  if (!sel || !activeNodeId) return;
-  const child = addNode(sel, activeNodeId);
-  branchBtn.classList.add("hidden");
-  window.getSelection().removeAllRanges();
-  openChat(child.id);
-});
-
-async function sendMessage() {
-  const question = chatInput.value.trim();
-  if (!question) return;
-
-  appendMsg("user", question);
-  chatInput.value = "";
-
-  const cfg = getConfig();
-  if (!cfg.url || !cfg.key) {
-    appendMsg("assistant", "⚠️ Please configure your LLM API in settings first.");
-    return;
-  }
-
+// Save editor content back to node
+document.getElementById("editor-save").addEventListener("click", () => {
+  if (!activeNodeId) return;
   const node = findNode(activeNodeId);
-  conversationHistory.push({ role: "user", content: question, timestamp: new Date().toISOString() });
-
-  const catId = getNodeCategory(node);
-  const categoryPrompt = CATEGORY_PROMPTS[catId] || "You are a novel creation AI assistant. Help the user develop their story.";
-  const ancestors = getAncestors(activeNodeId);
-  const contextChain = ancestors.map(n => `"${truncate(n.fullText, 200)}"`).join(" → ");
-
-  const systemPrompt = `${categoryPrompt}
-
-Creative hierarchy path: ${contextChain}
-
-Current focus:
-"${node.fullText}"
-
-Guidelines:
-- Stay in character as a novel creation assistant
-- Give specific, actionable creative suggestions
-- Flag plot holes, character inconsistencies, or worldbuilding contradictions
-- Reference the user's established story elements when relevant
-- Never generate full chapters unless explicitly asked — focus on planning and structure`
-    + (isVoiceInput ? `\nThe user's message was voice-transcribed; silently accommodate any speech artifacts without mentioning them.` : "");
-  isVoiceInput = false;
-
-  try {
-    const thinkingEl = document.createElement("div");
-    thinkingEl.className = "msg msg-thinking";
-    thinkingEl.innerHTML = '<span class="thinking-dots">Thinking</span>';
-    chatMessages.appendChild(thinkingEl);
-    chatMessages.scrollTop = chatMessages.scrollHeight;
-
-    const res = await fetch(cfg.url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
-      body: JSON.stringify({
-        model: cfg.model || "gpt-4o-mini",
-        messages: [{ role: "system", content: systemPrompt }, ...conversationHistory]
-      })
-    });
-
-    thinkingEl.remove();
-
-    if (!res.ok) {
-      const err = await res.text();
-      appendMsg("assistant", `⚠️ API error ${res.status}: ${err}`);
-      return;
-    }
-
-    const data = await res.json();
-    const reply = data.choices?.[0]?.message?.content || "(empty response)";
-    conversationHistory.push({ role: "assistant", content: reply, timestamp: new Date().toISOString() });
-    appendMsg("assistant", reply);
-
-    node.chatHistory = conversationHistory.map(m => ({ ...m }));
-    saveTree();
-  } catch (e) {
-    const leftover = chatMessages.querySelector(".msg-thinking");
-    if (leftover) leftover.remove();
-    appendMsg("assistant", `⚠️ Request failed: ${e.message}`);
-  }
-}
-
-// --- Markdown / KaTeX rendering ---
-
-function renderContent(text) {
-  const blocks = [];
-  let i = 0;
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (_, tex) => {
-    const id = `%%BLOCK${i}%%`;
-    try { blocks[i] = katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }); } catch { blocks[i] = tex; }
-    i++; return id;
-  });
-  text = text.replace(/\$\$([\s\S]*?)\$\$/g, (_, tex) => {
-    const id = `%%BLOCK${i}%%`;
-    try { blocks[i] = katex.renderToString(tex.trim(), { displayMode: true, throwOnError: false }); } catch { blocks[i] = tex; }
-    i++; return id;
-  });
-  text = text.replace(/\\\((.*?)\\\)/g, (_, tex) => {
-    const id = `%%BLOCK${i}%%`;
-    try { blocks[i] = katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } catch { blocks[i] = tex; }
-    i++; return id;
-  });
-  text = text.replace(/(?<!\$)\$(?!\$)([^\n$]+?)\$(?!\$)/g, (_, tex) => {
-    const id = `%%BLOCK${i}%%`;
-    try { blocks[i] = katex.renderToString(tex.trim(), { displayMode: false, throwOnError: false }); } catch { blocks[i] = tex; }
-    i++; return id;
-  });
-  let html = marked.parse(text);
-  for (let j = 0; j < blocks.length; j++) html = html.replace(`%%BLOCK${j}%%`, blocks[j]);
-  return html;
-}
-
-function appendMsg(role, content, scroll = true, timestamp = null) {
-  const div = document.createElement("div");
-  div.className = `msg msg-${role}`;
-  const ts = document.createElement("span");
-  ts.className = "msg-time";
-  ts.textContent = formatTime(timestamp || new Date().toISOString());
-  if (role === "assistant") {
-    div.innerHTML = renderContent(content);
-  } else {
-    div.textContent = content;
-  }
-  div.appendChild(ts);
-  chatMessages.appendChild(div);
-  if (scroll) chatMessages.scrollTop = chatMessages.scrollHeight;
-}
+  if (!node) return;
+  const editor = document.getElementById("node-editor");
+  node.fullText = editor.value;
+  saveTree();
+  // Visual feedback
+  const btn = document.getElementById("editor-save");
+  const orig = btn.textContent;
+  btn.textContent = "✓ Saved";
+  setTimeout(() => btn.textContent = orig, 1500);
+});
 
 // --- Settings (localStorage) ---
 
@@ -551,20 +387,20 @@ document.getElementById("save-settings").addEventListener("click", () => {
   setTimeout(() => (statusEl.textContent = ""), 2000);
 });
 
-// --- Init ---
-loadTree();
-
-// --- Export ---
+// --- Export (declarations must be before loadTree) ---
 
 const exportBtn = document.getElementById("export-btn");
+const previewBtn = document.getElementById("preview-btn");
+const jsonExportBtn = document.getElementById("json-export-btn");
+
+// --- Init ---
+loadTree();
 exportBtn.addEventListener("click", exportMarkdown);
 
-const previewBtn = document.getElementById("preview-btn");
 previewBtn.addEventListener("click", () => showPreview(nodes));
 
 document.getElementById("preview-back").addEventListener("click", () => {
   document.getElementById("preview-area").classList.add("hidden");
-  // Restore chat or empty state
   if (activeNodeId) {
     chatArea.classList.remove("hidden");
   } else {
@@ -572,7 +408,6 @@ document.getElementById("preview-back").addEventListener("click", () => {
   }
 });
 
-const jsonExportBtn = document.getElementById("json-export-btn");
 jsonExportBtn.addEventListener("click", exportAllJson);
 
 const jsonImportFile = document.getElementById("json-import-file");
