@@ -708,3 +708,34 @@ document.getElementById("editor-save").addEventListener("click", () => {
 });
 
 loadChapters();
+
+// === Resize Handle for Left Panel ===
+(function() {
+  const handle = document.getElementById("resize-handle");
+  const leftPanel = document.querySelector(".left-panel");
+  let dragging = false;
+
+  handle.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    dragging = true;
+    handle.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    const newWidth = e.clientX - leftPanel.getBoundingClientRect().left;
+    const min = parseInt(getComputedStyle(leftPanel).minWidth);
+    const max = parseInt(getComputedStyle(leftPanel).maxWidth);
+    leftPanel.style.width = Math.max(min, Math.min(max, newWidth)) + "px";
+  });
+
+  document.addEventListener("mouseup", () => {
+    if (!dragging) return;
+    dragging = false;
+    handle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  });
+})();
