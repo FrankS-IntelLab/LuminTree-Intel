@@ -36,16 +36,16 @@ body {
 .resize-handle:hover, .resize-handle.dragging { background: #1a73e8; }
 .middle-panel { flex: 1; overflow-y: auto; display: flex; flex-direction: column; padding: 0 12px; }
 .right-panel {
-  width: 260px; min-width: 200px; max-width: 340px;
-  overflow-y: auto; border-left: 1px solid #ddd; padding-left: 12px; flex-shrink: 0;
+  width: 260px; min-width: 200px; max-width: 400px;
+  overflow-y: auto; padding: 0 12px; flex-shrink: 0;
   display: flex; flex-direction: column;
 }
 .panel-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 13px; text-align: center; }
 
 /* AI Chat panel */
 .ai-panel {
-  width: 320px; min-width: 240px; max-width: 480px;
-  border-left: 1px solid #ddd; padding-left: 12px; flex-shrink: 0;
+  width: 400px; min-width: 260px; max-width: 600px;
+  padding: 0 12px; flex-shrink: 0;
   display: flex; flex-direction: column; overflow: hidden;
 }
 .ai-panel-header {

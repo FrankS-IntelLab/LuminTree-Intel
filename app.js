@@ -886,32 +886,48 @@ openChat = function(nodeId) {
   updateAiChapterLabel();
 };
 
-// === Resize Handle for Left Panel ===
+// === Resize Handles for All Panels ===
 (function() {
-  const handle = document.getElementById("resize-handle");
-  const leftPanel = document.querySelector(".left-panel");
-  let dragging = false;
+  const configs = [
+    { handle: "resize-handle", panel: ".left-panel" },
+    { handle: "resize-handle-2", panel: ".right-panel", right: true },
+    { handle: "resize-handle-3", panel: ".ai-panel", right: true }
+  ];
+  let active = null;
 
-  handle.addEventListener("mousedown", (e) => {
-    e.preventDefault();
-    dragging = true;
-    handle.classList.add("dragging");
-    document.body.style.cursor = "col-resize";
-    document.body.style.userSelect = "none";
+  configs.forEach(cfg => {
+    const handle = document.getElementById(cfg.handle);
+    const panel = cfg.right
+      ? document.querySelector(cfg.panel)
+      : document.querySelector(cfg.panel);
+
+    handle.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      active = { handle, panel, right: !!cfg.right };
+      handle.classList.add("dragging");
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+    });
   });
 
   document.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    const newWidth = e.clientX - leftPanel.getBoundingClientRect().left;
-    const min = parseInt(getComputedStyle(leftPanel).minWidth);
-    const max = parseInt(getComputedStyle(leftPanel).maxWidth);
-    leftPanel.style.width = Math.max(min, Math.min(max, newWidth)) + "px";
+    if (!active) return;
+    const { panel, right } = active;
+    const min = parseInt(getComputedStyle(panel).minWidth);
+    const max = parseInt(getComputedStyle(panel).maxWidth);
+    let newWidth;
+    if (right) {
+      newWidth = panel.getBoundingClientRect().right - e.clientX;
+    } else {
+      newWidth = e.clientX - panel.getBoundingClientRect().left;
+    }
+    panel.style.width = Math.max(min, Math.min(max, newWidth)) + "px";
   });
 
   document.addEventListener("mouseup", () => {
-    if (!dragging) return;
-    dragging = false;
-    handle.classList.remove("dragging");
+    if (!active) return;
+    active.handle.classList.remove("dragging");
+    active = null;
     document.body.style.cursor = "";
     document.body.style.userSelect = "";
   });
