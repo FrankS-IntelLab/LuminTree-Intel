@@ -66,9 +66,25 @@
           <span id="chat-breadcrumb"></span>
         </div>
         <div id="chat-snippet" class="snippet"></div>
-        <div class="editor-section">
-          <textarea id="node-editor" placeholder="Write your notes, plot details, character descriptions..."></textarea>
-          <button id="editor-save" class="editor-save-btn">💾 Save</button>
+        <!-- Tab buttons -->
+        <div class="middle-tabs">
+          <button id="tab-editor" class="middle-tab active">📝 Editor</button>
+          <button id="tab-ai" class="middle-tab">🤖 AI Assistant</button>
+        </div>
+        <!-- Editor sub-panel -->
+        <div id="sub-editor" class="sub-panel">
+          <div class="editor-section">
+            <textarea id="node-editor" placeholder="Write your notes, plot details, character descriptions..."></textarea>
+            <button id="editor-save" class="editor-save-btn">💾 Save</button>
+          </div>
+        </div>
+        <!-- AI Assistant sub-panel -->
+        <div id="sub-ai" class="sub-panel hidden">
+          <div id="node-ai-messages" class="ai-messages"></div>
+          <div class="ai-input-row">
+            <textarea id="node-ai-input" placeholder="Ask AI to help refine this section..." rows="2"></textarea>
+            <button id="node-ai-send-btn" title="Send">▶</button>
+          </div>
         </div>
       </div>
 

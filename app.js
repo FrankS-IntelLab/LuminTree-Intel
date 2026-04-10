@@ -403,10 +403,15 @@ function openChat(nodeId) {
   const editor = document.getElementById("node-editor");
   editor.value = node.fullText || "";
 
-  // Show editor in middle panel
+  // Show editor in middle panel, reset to editor tab
   document.getElementById("middle-empty").classList.add("hidden");
   chatArea.classList.remove("hidden");
   document.getElementById("preview-area").classList.add("hidden");
+  switchMiddleTab("editor");
+
+  // Load node AI history
+  loadNodeAiHistory(node);
+
   editor.focus();
 }
 
@@ -730,6 +735,11 @@ function openChapterInEditor(chId) {
   document.getElementById("middle-empty").classList.add("hidden");
   chatArea.classList.remove("hidden");
   document.getElementById("preview-area").classList.add("hidden");
+  switchMiddleTab("editor");
+
+  // Load chapter's node AI history
+  loadNodeAiHistory(ch);
+
   editor.focus();
   renderChapters();
 }
@@ -771,6 +781,129 @@ document.getElementById("editor-save").addEventListener("click", () => {
   const orig = btn.textContent;
   btn.textContent = "✓ Saved";
   setTimeout(() => btn.textContent = orig, 1500);
+});
+
+// === Middle Panel Tabs (Editor / AI Assistant) ===
+const tabEditor = document.getElementById("tab-editor");
+const tabAi = document.getElementById("tab-ai");
+const subEditor = document.getElementById("sub-editor");
+const subAi = document.getElementById("sub-ai");
+
+function switchMiddleTab(tab) {
+  tabEditor.classList.toggle("active", tab === "editor");
+  tabAi.classList.toggle("active", tab === "ai");
+  subEditor.classList.toggle("hidden", tab !== "editor");
+  subAi.classList.toggle("hidden", tab !== "ai");
+}
+tabEditor.addEventListener("click", () => switchMiddleTab("editor"));
+tabAi.addEventListener("click", () => switchMiddleTab("ai"));
+
+// === Node-level AI Assistant ===
+const nodeAiMessages = document.getElementById("node-ai-messages");
+const nodeAiInput = document.getElementById("node-ai-input");
+const nodeAiSendBtn = document.getElementById("node-ai-send-btn");
+let nodeAiHistory = [];
+
+function saveNodeAiHistory() {
+  const node = activeNodeId ? findNode(activeNodeId) : null;
+  const ch = activeChapterId ? chapters.find(c => c.id === activeChapterId) : null;
+  const target = node || ch;
+  if (target) { target.nodeAiHistory = nodeAiHistory; node ? saveTree() : saveChapters(); }
+}
+
+function loadNodeAiHistory(target) {
+  nodeAiHistory = target.nodeAiHistory || [];
+  nodeAiMessages.innerHTML = "";
+  for (const msg of nodeAiHistory) appendNodeAiMessage(msg.role, msg.content);
+}
+
+function appendNodeAiMessage(role, content) {
+  const div = document.createElement("div");
+  div.className = `ai-msg ai-msg-${role}`;
+  if (role === "assistant") {
+    div.innerHTML = typeof marked !== "undefined" ? marked.parse(content) : content.replace(/\n/g, "<br>");
+  } else {
+    div.textContent = content;
+  }
+  nodeAiMessages.appendChild(div);
+  nodeAiMessages.scrollTop = nodeAiMessages.scrollHeight;
+  return div;
+}
+
+function buildNodeAiSystemPrompt() {
+  const novelContext = buildNovelContext();
+  let targetTitle = "", targetContent = "", categoryPrompt = "";
+  if (activeNodeId) {
+    const node = findNode(activeNodeId);
+    if (node) {
+      targetTitle = node.title;
+      targetContent = node.fullText || "";
+      const catId = getNodeCategory(node);
+      categoryPrompt = catId && CATEGORY_PROMPTS[catId] ? CATEGORY_PROMPTS[catId] : "";
+    }
+  } else if (activeChapterId) {
+    const ch = chapters.find(c => c.id === activeChapterId);
+    if (ch) {
+      targetTitle = ch.title;
+      targetContent = ch.content || "";
+      categoryPrompt = CATEGORY_PROMPTS["chapter-structure"] || "";
+    }
+  }
+  return `${categoryPrompt}
+
+Below is the complete novel structure:
+
+${novelContext}
+
+The user is currently working on: "${targetTitle}"
+${targetContent ? `\nCurrent content:\n${targetContent}` : "\nNo content yet."}
+
+Help the user refine, develop, and improve this section. Be specific and actionable.`;
+}
+
+async function sendNodeAiMessage() {
+  const text = nodeAiInput.value.trim();
+  if (!text) return;
+  if (!activeNodeId && !activeChapterId) { alert("Select a node or chapter first."); return; }
+  const cfg = getConfig();
+  if (!cfg.url || !cfg.key) { alert("Configure your API settings first (⚙️ button)."); return; }
+
+  nodeAiInput.value = "";
+  appendNodeAiMessage("user", text);
+  nodeAiHistory.push({ role: "user", content: text });
+  saveNodeAiHistory();
+
+  const thinkingEl = appendNodeAiMessage("thinking", "Thinking...");
+  thinkingEl.classList.add("ai-msg-thinking");
+  nodeAiSendBtn.disabled = true;
+
+  try {
+    const systemPrompt = buildNodeAiSystemPrompt();
+    const messages = [{ role: "system", content: systemPrompt }, ...nodeAiHistory];
+    const res = await fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({ model: cfg.model || "gpt-4o-mini", messages })
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || "(No response)";
+    thinkingEl.remove();
+    appendNodeAiMessage("assistant", reply);
+    nodeAiHistory.push({ role: "assistant", content: reply });
+    saveNodeAiHistory();
+  } catch (err) {
+    thinkingEl.remove();
+    appendNodeAiMessage("assistant", `⚠️ Error: ${err.message}`);
+  } finally {
+    nodeAiSendBtn.disabled = false;
+    nodeAiInput.focus();
+  }
+}
+
+nodeAiSendBtn.addEventListener("click", sendNodeAiMessage);
+nodeAiInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendNodeAiMessage(); }
 });
 
 loadChapters();
