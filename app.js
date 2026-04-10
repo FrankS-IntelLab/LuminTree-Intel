@@ -523,14 +523,30 @@ async function smartImport(file) {
   if (!cfg.url || !cfg.key) { alert("Configure your API settings first (⚙️ button)."); return; }
 
   const text = await file.text();
-  let rawJson;
-  try { rawJson = JSON.parse(text); } catch { alert("Invalid JSON file."); return; }
+
+  // Step 1: Try direct JSON parse
+  let rawJson = null;
+  try { rawJson = JSON.parse(text); } catch {}
+
+  // Step 2: Try to extract JSON from text (e.g. markdown code fences)
+  if (!rawJson) {
+    const jsonMatch = text.match(/```(?:json)?\s*([\s\S]*?)```/i) || text.match(/(\{[\s\S]*\})/);
+    if (jsonMatch) {
+      try { rawJson = JSON.parse(jsonMatch[1].trim()); } catch {}
+    }
+  }
+
+  // Whatever we have (JSON object or raw text), send to AI for transformation
+  const userContent = rawJson ? JSON.stringify(rawJson, null, 2) : text;
 
   const catSchema = CATEGORIES.map(c => `  "${c.id}": { title: "${c.title}", children: [ { title: "...", fullText: "..." }, ... ] }`).join(",\n");
 
-  const systemPrompt = `You are a JSON transformation assistant. The user will provide a JSON file with novel/story configuration data. Its structure or naming may differ from the target format.
+  const systemPrompt = `You are a data transformation assistant for a novel writing tool. The user will provide input that contains novel/story configuration data. The input may be:
+- A well-structured JSON object
+- A JSON with different structure or naming than expected
+- Plain text, markdown, or any unstructured format describing a novel
 
-Your job: transform the input into the EXACT target format below. Map each piece of content to the correct category by meaning, not by name. If a field doesn't fit any category, put it in "writing-materials".
+Your job: extract ALL relevant content and transform it into the EXACT target JSON format below. Map each piece of content to the correct category by meaning, not by name. If a field doesn't fit any category, put it in "writing-materials".
 
 Target format (output ONLY valid JSON, no markdown, no explanation):
 {
@@ -550,7 +566,7 @@ Rules:
 - Preserve ALL content from the input — do not drop anything
 - Output ONLY the JSON object, nothing else`;
 
-  const userMsg = JSON.stringify(rawJson, null, 2);
+  const userMsg = userContent;
 
   // Show progress
   const btn = document.getElementById("smart-import-btn");
