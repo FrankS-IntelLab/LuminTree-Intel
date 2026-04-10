@@ -2,13 +2,15 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>LuminTree-Intel</title>
-  <link rel="stylesheet" href="sidebar.css">
+  <link rel="icon" href="logo.png">
+  <link rel="stylesheet" href="style.css">
   <link rel="stylesheet" href="lib/katex.min.css">
 </head>
 <body>
   <div class="header">
-    <img src="../logo.png" alt="LuminTree-Intel" class="header-logo"><h1>LuminTree-Intel</h1>
+    <img src="logo.png" alt="LuminTree-Intel" class="header-logo"><h1>LuminTree-Intel</h1>
     <button id="settings-btn" title="Settings">⚙️</button>
   </div>
 
@@ -35,7 +37,7 @@
 
   <!-- Tree view -->
   <div id="tree-view">
-    <p class="hint">Select reference text on any page → right-click → "Push to Panel" to collect writing material</p>
+    <p class="hint">Click any category to start building your novel. Add child nodes to organize ideas.</p>
     <div id="tree"></div>
     <button id="export-btn" class="export-btn hidden">📄 Export</button>
     <button id="preview-btn" class="preview-btn hidden">👁 Preview</button>
@@ -72,7 +74,6 @@
   <script src="lib/katex.min.js"></script>
   <script src="lib/marked.min.js"></script>
   <script src="lib/mermaid.min.js"></script>
-
-  <script src="sidebar.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>

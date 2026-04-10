@@ -1,6 +1,6 @@
-// === LuminTree-Intel — Novel Creation Studio ===
+// === LuminTree-Intel — Novel Creation Studio (Web App) ===
 // Fixed 6-category tree for structured novel development
-// Categories: Core Concept, Worldview, Plot Framework, Character Library, Chapter Structure, Writing Materials
+// Storage: localStorage | Voice: Web Speech API (direct, no extension injection)
 
 const treeEl = document.getElementById("tree");
 const treeView = document.getElementById("tree-view");
@@ -34,10 +34,9 @@ const CATEGORY_PROMPTS = {
 };
 
 // --- Data ---
-// Each node: { id, parentId, categoryId, title, fullText, timestamp, children: [], chatHistory: [] }
 let nodes = [];
 let activeNodeId = null;
-let targetParentId = null; // pinned parent for next push
+let targetParentId = null;
 let conversationHistory = [];
 let isVoiceInput = false;
 
@@ -62,10 +61,8 @@ function findNode(id, list = nodes) {
   return null;
 }
 
-// Find which fixed category a node belongs to
 function getNodeCategory(node) {
   if (node.categoryId) return node.categoryId;
-  // Walk up to root to find category
   let current = node;
   while (current.parentId) {
     current = findNode(current.parentId);
@@ -74,7 +71,6 @@ function getNodeCategory(node) {
   return current ? current.categoryId : null;
 }
 
-// Get ancestor chain for breadcrumb
 function getAncestors(id) {
   const path = [];
   let node = findNode(id);
@@ -85,56 +81,38 @@ function getAncestors(id) {
   return path;
 }
 
-// Initialize fixed category root nodes if they don't exist
 function ensureCategories() {
   for (const cat of CATEGORIES) {
     const exists = nodes.find(n => n.categoryId === cat.id && !n.parentId);
     if (!exists) {
       nodes.push({
-        id: cat.id,
-        parentId: null,
-        categoryId: cat.id,
-        title: cat.title,
-        fullText: cat.placeholder,
+        id: cat.id, parentId: null, categoryId: cat.id,
+        title: cat.title, fullText: cat.placeholder,
         timestamp: new Date().toISOString(),
-        children: [],
-        chatHistory: [],
-        isCategory: true // marks this as a fixed category root — cannot be deleted
+        children: [], chatHistory: [], isCategory: true
       });
     }
   }
 }
 
-function addNode(text, parentId = null, sourceUrl = "") {
-  // If no parent specified and a category is pinned, use that
-  const effectiveParent = parentId || targetParentId;
-  // If still no parent, default to writing-materials category
-  const finalParent = effectiveParent || "writing-materials";
-
+function addNode(text, parentId = null) {
+  const finalParent = parentId || targetParentId || "writing-materials";
   const node = {
-    id: genId(),
-    parentId: finalParent,
-    categoryId: null, // inherits from parent chain
-    title: truncate(text),
-    fullText: text,
-    sourceUrl,
+    id: genId(), parentId: finalParent, categoryId: null,
+    title: truncate(text), fullText: text,
     timestamp: new Date().toISOString(),
-    children: [],
-    chatHistory: []
+    children: [], chatHistory: []
   };
-
   const parent = findNode(finalParent);
   if (parent) parent.children.push(node);
-
   saveTree();
   renderTree();
-  // Ask AI for a concise title
   generateTitle(node);
   return node;
 }
 
 async function generateTitle(node) {
-  const cfg = await getConfig();
+  const cfg = getConfig();
   if (!cfg.url || !cfg.key) return;
   const catId = getNodeCategory(node);
   const catContext = catId ? CATEGORIES.find(c => c.id === catId)?.title : "novel writing";
@@ -164,7 +142,6 @@ async function generateTitle(node) {
 function removeNode(id, list = nodes) {
   for (let i = 0; i < list.length; i++) {
     if (list[i].id === id) {
-      // Prevent deleting fixed category roots
       if (list[i].isCategory) return false;
       list.splice(i, 1); saveTree(); renderTree(); return true;
     }
@@ -173,36 +150,31 @@ function removeNode(id, list = nodes) {
   return false;
 }
 
-// --- Persistence (chrome.storage.local, namespaced keys) ---
+// --- Persistence (localStorage) ---
 
 function saveTree() {
-  chrome.storage.local.set({ lumintree_tree: nodes });
+  try { localStorage.setItem("lumintree_tree", JSON.stringify(nodes)); } catch {}
 }
 
 function loadTree() {
-  chrome.storage.local.get(["lumintree_tree"], (data) => {
-    nodes = data.lumintree_tree || [];
-    ensureCategories();
-    renderTree();
-  });
+  try { nodes = JSON.parse(localStorage.getItem("lumintree_tree")) || []; } catch { nodes = []; }
+  ensureCategories();
+  renderTree();
 }
 
 // --- Tree rendering ---
 
-// Collect all nodes in a subtree
 function collectNodes(node, out = []) {
   out.push(node);
   for (const c of node.children) collectNodes(c, out);
   return out;
 }
 
-// Sets of nodeIds for last-accessed highlights (rebuilt each render)
 let lastReadIds = new Set();
 let prevReadIds = new Set();
 
 function renderTree() {
   treeEl.innerHTML = "";
-  // Build last-read and prev-read sets per category root
   lastReadIds = new Set();
   prevReadIds = new Set();
   for (const root of nodes) {
@@ -211,7 +183,6 @@ function renderTree() {
     if (all[0]) lastReadIds.add(all[0].id);
     if (all[1]) prevReadIds.add(all[1].id);
   }
-  // Show pinned parent indicator
   const indicator = document.getElementById("pin-indicator");
   if (indicator) indicator.remove();
   if (targetParentId) {
@@ -220,7 +191,7 @@ function renderTree() {
       const bar = document.createElement("div");
       bar.id = "pin-indicator";
       bar.className = "pin-indicator";
-      bar.innerHTML = `📌 Next push → child of "<b>${truncate(node.title, 30)}</b>" <button id="unpin-btn">✕ Unpin</button>`;
+      bar.innerHTML = `📌 Next node → child of "<b>${truncate(node.title, 30)}</b>" <button id="unpin-btn">✕ Unpin</button>`;
       treeEl.before(bar);
       document.getElementById("unpin-btn").addEventListener("click", () => {
         targetParentId = null;
@@ -228,7 +199,6 @@ function renderTree() {
       });
     }
   }
-  // Render fixed category roots in defined order
   for (const cat of CATEGORIES) {
     const root = nodes.find(n => n.categoryId === cat.id && !n.parentId);
     if (root) treeEl.appendChild(renderNodeEl(root, 0));
@@ -275,39 +245,34 @@ function renderNodeEl(node, depth) {
   ts.className = "tree-time";
   ts.textContent = node.isCategory ? "" : formatTime(node.timestamp);
 
-  // Preview this branch
   const exp = document.createElement("button");
   exp.className = "tree-export";
   exp.textContent = "👁";
   exp.title = "Preview this branch";
   exp.addEventListener("click", (e) => { e.stopPropagation(); showPreview([node]); });
 
-  // Download this branch as Markdown
   const dl = document.createElement("button");
   dl.className = "tree-export";
   dl.textContent = "📥";
   dl.title = "Download this branch (Markdown)";
   dl.addEventListener("click", (e) => { e.stopPropagation(); exportBranch(node); });
 
-  // Export this branch as JSON
   const jsonDl = document.createElement("button");
   jsonDl.className = "tree-export";
   jsonDl.textContent = "💾";
   jsonDl.title = "Export this branch (JSON)";
   jsonDl.addEventListener("click", (e) => { e.stopPropagation(); exportBranchJson(node); });
 
-  // Pin as parent button
   const pin = document.createElement("button");
   pin.className = "tree-pin";
   pin.textContent = node.id === targetParentId ? "📌" : "🔗";
-  pin.title = node.id === targetParentId ? "Unpin" : "Pin as parent for next push";
+  pin.title = node.id === targetParentId ? "Unpin" : "Pin as parent for next node";
   pin.addEventListener("click", (e) => {
     e.stopPropagation();
     targetParentId = targetParentId === node.id ? null : node.id;
     renderTree();
   });
 
-  // Delete button (hidden for category roots)
   const del = document.createElement("button");
   del.className = "tree-del";
   del.textContent = "✕";
@@ -321,18 +286,6 @@ function renderNodeEl(node, depth) {
   row.appendChild(toggle);
   row.appendChild(label);
   row.appendChild(ts);
-  if (node.sourceUrl) {
-    const src = document.createElement("a");
-    src.className = "tree-source";
-    src.href = node.sourceUrl;
-    src.textContent = "📄";
-    src.title = node.sourceUrl;
-    src.addEventListener("click", (e) => {
-      e.stopPropagation();
-      chrome.tabs.create({ url: node.sourceUrl });
-    });
-    row.appendChild(src);
-  }
   row.appendChild(exp);
   row.appendChild(dl);
   row.appendChild(jsonDl);
@@ -360,21 +313,9 @@ function openChat(nodeId) {
   saveTree();
   conversationHistory = node.chatHistory.map(m => ({ role: m.role, content: m.content, timestamp: m.timestamp }));
 
-  // Breadcrumb showing category path
   const ancestors = getAncestors(nodeId);
   chatBreadcrumb.textContent = ancestors.map(n => truncate(n.title, 20)).join(" → ");
-
   chatSnippet.textContent = node.fullText;
-  if (node.sourceUrl) {
-    const srcLink = document.createElement("a");
-    srcLink.className = "snippet-source";
-    srcLink.href = node.sourceUrl;
-    srcLink.textContent = node.sourceUrl.length > 60 ? node.sourceUrl.slice(0, 60) + "…" : node.sourceUrl;
-    srcLink.title = node.sourceUrl;
-    srcLink.addEventListener("click", (e) => { e.preventDefault(); chrome.tabs.create({ url: node.sourceUrl }); });
-    chatSnippet.appendChild(document.createElement("br"));
-    chatSnippet.appendChild(srcLink);
-  }
   chatMessages.innerHTML = "";
   node.chatHistory.forEach(m => appendMsg(m.role, m.content, false, m.timestamp));
 
@@ -392,27 +333,54 @@ document.getElementById("chat-back").addEventListener("click", () => {
 document.getElementById("chat-send").addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
 
-// --- Voice Input (injected into active tab) ---
+// --- Voice Input (Web Speech API, runs directly in page) ---
 
 const voiceBtn = document.getElementById("voice-btn");
+let recognition = null;
 
 voiceBtn.addEventListener("click", () => {
-  chrome.runtime.sendMessage({ type: "start-voice-in-tab" });
+  if (recognition) { recognition.stop(); return; }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { alert("Speech recognition not supported in this browser."); return; }
+
+  recognition = new SR();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = "en-US";
+
+  let finalTranscript = "";
+  voiceBtn.classList.add("recording");
+  voiceBtn.textContent = "⏹";
+
+  recognition.onresult = (e) => {
+    let interim = "";
+    for (let i = e.resultIndex; i < e.results.length; i++) {
+      if (e.results[i].isFinal) finalTranscript += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    chatInput.value = finalTranscript + interim;
+  };
+
+  recognition.onend = () => {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.textContent = "🎤";
+    recognition = null;
+    if (finalTranscript.trim()) {
+      isVoiceInput = true;
+      sendMessage();
+    }
+  };
+
+  recognition.onerror = () => {
+    voiceBtn.classList.remove("recording");
+    voiceBtn.textContent = "🎤";
+    recognition = null;
+  };
+
+  recognition.start();
 });
 
-chrome.runtime.onMessage.addListener((msg) => {
-  if (msg.type === "push-text") {
-    addNode(msg.text, targetParentId, msg.sourceUrl || "");
-    if (targetParentId) { targetParentId = null; renderTree(); }
-  }
-  if (msg.type === "voice-final") {
-    chatInput.value = msg.text;
-    isVoiceInput = true;
-    sendMessage();
-  }
-});
-
-// Show branch button when user selects text in chat messages
+// Branch from selected text in chat
 chatMessages.addEventListener("mouseup", () => {
   const sel = window.getSelection().toString().trim();
   branchBtn.classList.toggle("hidden", sel.length === 0);
@@ -434,7 +402,7 @@ async function sendMessage() {
   appendMsg("user", question);
   chatInput.value = "";
 
-  const cfg = await getConfig();
+  const cfg = getConfig();
   if (!cfg.url || !cfg.key) {
     appendMsg("assistant", "⚠️ Please configure your LLM API in settings first.");
     return;
@@ -443,11 +411,8 @@ async function sendMessage() {
   const node = findNode(activeNodeId);
   conversationHistory.push({ role: "user", content: question, timestamp: new Date().toISOString() });
 
-  // Build novel-creation-aware system prompt based on category
   const catId = getNodeCategory(node);
   const categoryPrompt = CATEGORY_PROMPTS[catId] || "You are a novel creation AI assistant. Help the user develop their story.";
-
-  // Build context from ancestor chain (shows the creative hierarchy)
   const ancestors = getAncestors(activeNodeId);
   const contextChain = ancestors.map(n => `"${truncate(n.fullText, 200)}"`).join(" → ");
 
@@ -468,7 +433,6 @@ Guidelines:
   isVoiceInput = false;
 
   try {
-    // Show thinking indicator
     const thinkingEl = document.createElement("div");
     thinkingEl.className = "msg msg-thinking";
     thinkingEl.innerHTML = '<span class="thinking-dots">Thinking</span>';
@@ -477,16 +441,10 @@ Guidelines:
 
     const res = await fetch(cfg.url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${cfg.key}`
-      },
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
       body: JSON.stringify({
         model: cfg.model || "gpt-4o-mini",
-        messages: [
-          { role: "system", content: systemPrompt },
-          ...conversationHistory
-        ]
+        messages: [{ role: "system", content: systemPrompt }, ...conversationHistory]
       })
     });
 
@@ -503,7 +461,6 @@ Guidelines:
     conversationHistory.push({ role: "assistant", content: reply, timestamp: new Date().toISOString() });
     appendMsg("assistant", reply);
 
-    // Persist chat history to node
     node.chatHistory = conversationHistory.map(m => ({ ...m }));
     saveTree();
   } catch (e) {
@@ -559,13 +516,15 @@ function appendMsg(role, content, scroll = true, timestamp = null) {
   if (scroll) chatMessages.scrollTop = chatMessages.scrollHeight;
 }
 
+// --- Settings (localStorage) ---
+
 function getConfig() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["lumintree_api"], (data) => resolve(data.lumintree_api || {}));
-  });
+  try { return JSON.parse(localStorage.getItem("lumintree_api")) || {}; } catch { return {}; }
 }
 
-// --- Settings ---
+function saveConfig(cfg) {
+  localStorage.setItem("lumintree_api", JSON.stringify(cfg));
+}
 
 document.getElementById("settings-btn").addEventListener("click", () => settingsEl.classList.toggle("hidden"));
 
@@ -579,23 +538,20 @@ document.getElementById("api-preset").addEventListener("change", (e) => {
   if (p) { document.getElementById("api-url").value = p.url; document.getElementById("api-model").value = p.model; }
 });
 
-chrome.storage.local.get(["lumintree_api"], (data) => {
-  const cfg = data.lumintree_api || {};
-  document.getElementById("api-url").value = cfg.url || "";
-  document.getElementById("api-key").value = cfg.key || "";
-  document.getElementById("api-model").value = cfg.model || "";
-});
+// Load saved settings into form
+const savedCfg = getConfig();
+document.getElementById("api-url").value = savedCfg.url || "";
+document.getElementById("api-key").value = savedCfg.key || "";
+document.getElementById("api-model").value = savedCfg.model || "";
 
 document.getElementById("save-settings").addEventListener("click", () => {
-  const cfg = {
+  saveConfig({
     url: document.getElementById("api-url").value.trim(),
     key: document.getElementById("api-key").value.trim(),
     model: document.getElementById("api-model").value.trim()
-  };
-  chrome.storage.local.set({ lumintree_api: cfg }, () => {
-    statusEl.textContent = "✓ Saved";
-    setTimeout(() => (statusEl.textContent = ""), 2000);
   });
+  statusEl.textContent = "✓ Saved";
+  setTimeout(() => (statusEl.textContent = ""), 2000);
 });
 
 // --- Init ---
@@ -623,7 +579,6 @@ jsonImportFile.addEventListener("change", (e) => {
   if (e.target.files[0]) { importJson(e.target.files[0]); e.target.value = ""; }
 });
 
-// Init mermaid
 mermaid.initialize({ startOnLoad: false, theme: "default" });
 
 async function showPreview(rootNodes) {
@@ -670,9 +625,7 @@ function exportBranchJson(node) {
   const blob = new Blob([JSON.stringify([node], null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `lumintree-${node.id}-${date}.json`;
-  a.click();
+  a.href = url; a.download = `lumintree-${node.id}-${date}.json`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -681,9 +634,7 @@ function exportAllJson() {
   const blob = new Blob([JSON.stringify(nodes, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = `lumintree-export-${date}.json`;
-  a.click();
+  a.href = url; a.download = `lumintree-export-${date}.json`; a.click();
   URL.revokeObjectURL(url);
 }
 
@@ -693,15 +644,10 @@ function importJson(file) {
     try {
       const imported = JSON.parse(reader.result);
       if (!Array.isArray(imported)) throw new Error("Invalid format");
-      // Merge imported nodes into existing categories or append
       for (const imp of imported) {
         if (imp.isCategory && imp.categoryId) {
-          // Merge children into existing category
           const existing = nodes.find(n => n.categoryId === imp.categoryId && n.isCategory);
-          if (existing) {
-            existing.children.push(...(imp.children || []));
-            continue;
-          }
+          if (existing) { existing.children.push(...(imp.children || [])); continue; }
         }
         nodes.push(imp);
       }
@@ -717,7 +663,7 @@ function importJson(file) {
 
 function buildExportMd(rootNodes) {
   const date = new Date().toISOString().slice(0, 10);
-  let md = `# LuminTree — Novel Project Export (${date})\n\n`;
+  let md = `# LuminTree-Intel — Novel Project Export (${date})\n\n`;
 
   md += "```mermaid\nflowchart TD\n";
   const allNodes = [];
@@ -746,23 +692,16 @@ function renderNodeMd(node, headingLevel) {
   let md = `${h} ${node.title}\n`;
   if (!node.isCategory) {
     md += `> ${node.fullText.replace(/\n/g, "\n> ")}\n`;
-    md += `> *${formatTime(node.timestamp)}*`;
-    if (node.sourceUrl) md += ` | [Source](${node.sourceUrl})`;
-    md += `\n\n`;
+    md += `> *${formatTime(node.timestamp)}*\n\n`;
   } else {
     md += "\n";
   }
-
   if (node.chatHistory && node.chatHistory.length > 0) {
     node.chatHistory.forEach(m => {
-      if (m.role === "user") {
-        md += `**Q:** ${m.content} *(${formatTime(m.timestamp)})*\n\n`;
-      } else {
-        md += `**A:** ${m.content}\n\n`;
-      }
+      if (m.role === "user") md += `**Q:** ${m.content} *(${formatTime(m.timestamp)})*\n\n`;
+      else md += `**A:** ${m.content}\n\n`;
     });
   }
-
   node.children.forEach(c => { md += renderNodeMd(c, headingLevel + 1); });
   return md;
 }
@@ -775,8 +714,6 @@ function downloadFile(filename, content) {
   const blob = new Blob([content], { type: "text/markdown" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
+  a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
