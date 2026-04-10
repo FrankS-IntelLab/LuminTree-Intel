@@ -574,18 +574,28 @@ Rules:
 
     const transformed = JSON.parse(reply);
 
-    // Import the transformed data
-    if (transformed.nodes && Array.isArray(transformed.nodes)) {
-      for (const imp of transformed.nodes) {
-        if (imp.isCategory && imp.categoryId) {
-          const existing = nodes.find(n => n.categoryId === imp.categoryId && n.isCategory);
-          if (existing) { existing.children.push(...(imp.children || [])); continue; }
+    // Robustly merge transformed data into existing categories
+    const importNodes = transformed.nodes || (Array.isArray(transformed) ? transformed : []);
+    for (const imp of importNodes) {
+      // Find which category this belongs to
+      const catId = imp.categoryId || imp.id;
+      const existing = nodes.find(n => n.categoryId === catId && n.isCategory);
+      if (existing && imp.children && imp.children.length > 0) {
+        // Ensure each child has required fields
+        for (const child of imp.children) {
+          child.id = child.id || genId();
+          child.parentId = existing.id;
+          child.children = child.children || [];
+          child.timestamp = child.timestamp || new Date().toISOString();
+          child.fullText = child.fullText || "";
         }
-        nodes.push(imp);
+        existing.children.push(...imp.children);
       }
     }
     if (transformed.chapters && Array.isArray(transformed.chapters)) {
       for (const ch of transformed.chapters) {
+        ch.id = ch.id || genId();
+        ch.content = ch.content || "";
         if (!chapters.find(c => c.id === ch.id)) chapters.push(ch);
       }
       saveChapters();
