@@ -364,11 +364,11 @@ function renderNodeEl(node, depth) {
     const impBtn = document.createElement("button");
     impBtn.className = "tree-add";
     impBtn.textContent = "📂";
-    impBtn.title = "Import chapters from JSON";
+    impBtn.title = "Import chapters (JSON, TXT, MD)";
     impBtn.addEventListener("click", (e) => {
       e.stopPropagation();
       const input = document.createElement("input");
-      input.type = "file"; input.accept = ".json"; input.style.display = "none";
+      input.type = "file"; input.accept = ".json,.txt,.md"; input.style.display = "none";
       input.addEventListener("change", () => {
         if (input.files[0]) importChaptersJson(input.files[0]);
       });
@@ -749,43 +749,72 @@ function importJson(file) {
   reader.readAsText(file);
 }
 
-// Import chapters from JSON into chapter-structure and chapters panel
-function importChaptersJson(file) {
-  const reader = new FileReader();
-  reader.onload = () => {
+// Import chapters into chapter-structure and chapters panel (any format)
+async function importChaptersJson(file) {
+  const text = await file.text();
+
+  // Try to parse as JSON directly
+  let parsed = null;
+  try { parsed = JSON.parse(text); } catch {}
+
+  // Try to extract JSON from text
+  if (!parsed) {
+    const m = text.match(/```(?:json)?\s*([\s\S]*?)```/i) || text.match(/(\[[\s\S]*\])/);
+    if (m) { try { parsed = JSON.parse(m[1].trim()); } catch {} }
+  }
+
+  let chList;
+  if (parsed) {
+    chList = Array.isArray(parsed) ? parsed : (parsed.chapters || []);
+  } else {
+    // Send raw text to AI to extract chapters
+    const cfg = getConfig();
+    if (!cfg.url || !cfg.key) { alert("Not valid JSON and no API configured for AI extraction."); return; }
+    const btn = document.querySelector('[title*="Import chapters"]');
+    if (btn) { btn.textContent = "⏳"; btn.disabled = true; }
     try {
-      const imported = JSON.parse(reader.result);
-      // Accept array of chapters or { chapters: [...] }
-      const chList = Array.isArray(imported) ? imported : (imported.chapters || []);
-      const csRoot = findNode("chapter-structure");
-      for (const ch of chList) {
-        const id = ch.id || genId();
-        const title = ch.title || "Untitled Chapter";
-        const content = ch.content || "";
-        // Add to chapters panel
-        if (!chapters.find(c => c.id === id)) {
-          chapters.push({ id, title, content });
-        }
-        // Add linked tree node under chapter-structure
-        if (csRoot && !csRoot.children.find(c => c.chapterId === id)) {
-          csRoot.children.push({
-            id, parentId: "chapter-structure", categoryId: null,
-            title, fullText: ch.notes || ch.structure || "",
-            timestamp: new Date().toISOString(),
-            children: [], chatHistory: [], chapterId: id
-          });
-        }
-      }
-      saveChapters();
-      saveTree();
-      renderTree();
-      renderChapters();
-      alert(`✅ Imported ${chList.length} chapter(s).`);
+      const res = await fetch(cfg.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+        body: JSON.stringify({
+          model: cfg.model || "gpt-4o-mini",
+          messages: [
+            { role: "system", content: `Extract chapter information from the user's input. Output ONLY a valid JSON array of chapters, no markdown, no explanation. Each chapter: { "title": "...", "content": "...", "notes": "..." }. Preserve ALL content.` },
+            { role: "user", content: text }
+          ], temperature: 0.1
+        })
+      });
+      if (!res.ok) throw new Error(`API error: ${res.status}`);
+      const data = await res.json();
+      let reply = (data.choices?.[0]?.message?.content || "").replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+      chList = JSON.parse(reply);
+      if (!Array.isArray(chList)) chList = chList.chapters || [];
     } catch (e) {
-      alert("Chapter import failed: " + e.message);
+      alert("Chapter import failed: " + e.message); return;
+    } finally {
+      if (btn) { btn.textContent = "📂"; btn.disabled = false; }
     }
-  };
-  reader.readAsText(file);
+  }
+
+  const csRoot = findNode("chapter-structure");
+  for (const ch of chList) {
+    const id = ch.id || genId();
+    const title = ch.title || "Untitled Chapter";
+    const content = ch.content || "";
+    if (!chapters.find(c => c.id === id)) {
+      chapters.push({ id, title, content });
+    }
+    if (csRoot && !csRoot.children.find(c => c.chapterId === id)) {
+      csRoot.children.push({
+        id, parentId: "chapter-structure", categoryId: null,
+        title, fullText: ch.notes || ch.structure || "",
+        timestamp: new Date().toISOString(),
+        children: [], chatHistory: [], chapterId: id
+      });
+    }
+  }
+  saveChapters(); saveTree(); renderTree(); renderChapters();
+  alert(`✅ Imported ${chList.length} chapter(s).`);
 }
 
 function buildExportMd(rootNodes) {
