@@ -995,6 +995,24 @@ function appendAiMessage(role, content) {
   div.className = `ai-msg ai-msg-${role}`;
   if (role === "assistant") {
     div.innerHTML = typeof marked !== "undefined" ? marked.parse(content) : content.replace(/\n/g, "<br>");
+    // Add "Use as Draft" button to push content into chapter editor
+    const useBtn = document.createElement("button");
+    useBtn.className = "ai-use-btn";
+    useBtn.textContent = "📋 Use as Draft";
+    useBtn.title = "Push this content into the chapter editor as a candidate draft";
+    useBtn.addEventListener("click", () => {
+      const ch = getSelectedChapter();
+      if (!ch) { alert("No chapter selected."); return; }
+      ch.content = content;
+      saveChapters();
+      // Update editor if this chapter is currently open
+      if (activeChapterId === ch.id) {
+        document.getElementById("node-editor").value = content;
+      }
+      useBtn.textContent = "✅ Applied";
+      useBtn.disabled = true;
+    });
+    div.appendChild(useBtn);
   } else {
     div.textContent = content;
   }

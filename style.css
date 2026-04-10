@@ -69,6 +69,12 @@ body {
 .ai-msg-assistant p { margin-bottom: 6px; }
 .ai-msg-assistant pre { background: #f0f0f0; padding: 8px; border-radius: 4px; overflow-x: auto; margin: 6px 0; }
 .ai-msg-assistant code { background: #f0f0f0; padding: 1px 4px; border-radius: 3px; font-size: 12px; }
+.ai-use-btn {
+  display: block; margin-top: 8px; padding: 4px 12px; background: #e8f5e9; border: 1px solid #a5d6a7;
+  border-radius: 4px; font-size: 11px; cursor: pointer; color: #2e7d32;
+}
+.ai-use-btn:hover { background: #c8e6c9; }
+.ai-use-btn:disabled { opacity: 0.6; cursor: default; background: #e8f5e9; }
 .ai-msg-thinking { background: #fff; border: 1px solid #ddd; color: #888; font-size: 13px; }
 .ai-input-row { display: flex; gap: 6px; align-items: flex-end; }
 .ai-input-row textarea {
