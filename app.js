@@ -594,6 +594,13 @@ Rules:
           child.children = child.children || [];
           child.timestamp = child.timestamp || new Date().toISOString();
           child.fullText = child.fullText || "";
+          // Auto-link chapter-structure children to chapters panel
+          if (catId === "chapter-structure") {
+            child.chapterId = child.chapterId || child.id;
+            if (!chapters.find(c => c.id === child.chapterId)) {
+              chapters.push({ id: child.chapterId, title: child.title, content: "" });
+            }
+          }
         }
         existing.children.push(...imp.children);
       }
@@ -694,7 +701,18 @@ function importJson(file) {
       for (const imp of importedNodes) {
         if (imp.isCategory && imp.categoryId) {
           const existing = nodes.find(n => n.categoryId === imp.categoryId && n.isCategory);
-          if (existing) { existing.children.push(...(imp.children || [])); continue; }
+          if (existing) {
+            // Auto-link chapter-structure children to chapters panel
+            if (imp.categoryId === "chapter-structure") {
+              for (const child of (imp.children || [])) {
+                child.chapterId = child.chapterId || child.id;
+                if (child.chapterId && !chapters.find(c => c.id === child.chapterId)) {
+                  chapters.push({ id: child.chapterId, title: child.title || "Untitled", content: "" });
+                }
+              }
+            }
+            existing.children.push(...(imp.children || [])); continue;
+          }
         }
         nodes.push(imp);
       }
@@ -702,8 +720,8 @@ function importJson(file) {
         for (const ch of importedChapters) {
           if (!chapters.find(c => c.id === ch.id)) chapters.push(ch);
         }
-        saveChapters();
       }
+      saveChapters();
       ensureCategories();
       saveTree();
       renderTree();
