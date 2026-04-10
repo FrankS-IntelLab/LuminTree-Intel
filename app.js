@@ -531,7 +531,8 @@ function exportBranchJson(node) {
 
 function exportAllJson() {
   const date = new Date().toISOString().slice(0, 10);
-  const blob = new Blob([JSON.stringify(nodes, null, 2)], { type: "application/json" });
+  const data = { nodes, chapters };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url; a.download = `lumintree-export-${date}.json`; a.click();
@@ -542,18 +543,31 @@ function importJson(file) {
   const reader = new FileReader();
   reader.onload = () => {
     try {
-      const imported = JSON.parse(reader.result);
-      if (!Array.isArray(imported)) throw new Error("Invalid format");
-      for (const imp of imported) {
+      let imported = JSON.parse(reader.result);
+      // Support new format { nodes, chapters } and legacy array format
+      let importedNodes, importedChapters;
+      if (Array.isArray(imported)) {
+        importedNodes = imported; importedChapters = null;
+      } else if (imported && Array.isArray(imported.nodes)) {
+        importedNodes = imported.nodes; importedChapters = imported.chapters || null;
+      } else { throw new Error("Invalid format"); }
+      for (const imp of importedNodes) {
         if (imp.isCategory && imp.categoryId) {
           const existing = nodes.find(n => n.categoryId === imp.categoryId && n.isCategory);
           if (existing) { existing.children.push(...(imp.children || [])); continue; }
         }
         nodes.push(imp);
       }
+      if (importedChapters) {
+        for (const ch of importedChapters) {
+          if (!chapters.find(c => c.id === ch.id)) chapters.push(ch);
+        }
+        saveChapters();
+      }
       ensureCategories();
       saveTree();
       renderTree();
+      renderChapters();
     } catch (e) {
       alert("Import failed: " + e.message);
     }
@@ -766,7 +780,25 @@ const aiMessages = document.getElementById("ai-messages");
 const aiInput = document.getElementById("ai-input");
 const aiSendBtn = document.getElementById("ai-send-btn");
 const aiChapterLabel = document.getElementById("ai-chapter-label");
-let aiChatHistory = []; // per-session chat history
+let aiChatHistory = []; // per-chapter chat history (saved on chapter object)
+
+function getSelectedChapter() {
+  if (activeChapterId) return chapters.find(c => c.id === activeChapterId) || null;
+  return null;
+}
+
+// Save current AI chat history to the active chapter
+function saveAiChatHistory() {
+  const ch = getSelectedChapter();
+  if (ch) { ch.aiHistory = aiChatHistory; saveChapters(); }
+}
+
+// Load AI chat history from a chapter and render messages
+function loadAiChatHistory(ch) {
+  aiChatHistory = ch.aiHistory || [];
+  aiMessages.innerHTML = "";
+  for (const msg of aiChatHistory) appendAiMessage(msg.role, msg.content);
+}
 
 function getSelectedChapter() {
   if (activeChapterId) return chapters.find(c => c.id === activeChapterId) || null;
@@ -836,6 +868,7 @@ async function sendAiMessage() {
   aiInput.value = "";
   appendAiMessage("user", text);
   aiChatHistory.push({ role: "user", content: text });
+  saveAiChatHistory();
 
   const thinkingEl = appendAiMessage("thinking", "Writing...");
   thinkingEl.classList.add("ai-msg-thinking");
@@ -856,6 +889,7 @@ async function sendAiMessage() {
     thinkingEl.remove();
     appendAiMessage("assistant", reply);
     aiChatHistory.push({ role: "assistant", content: reply });
+    saveAiChatHistory();
   } catch (err) {
     thinkingEl.remove();
     appendAiMessage("assistant", `⚠️ Error: ${err.message}`);
@@ -870,12 +904,12 @@ aiInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAiMessage(); }
 });
 
-// Clear AI chat history when switching chapters
+// Load AI chat history when switching chapters
 const _origOpenChapter = openChapterInEditor;
 openChapterInEditor = function(chId) {
   _origOpenChapter(chId);
-  aiChatHistory = [];
-  aiMessages.innerHTML = "";
+  const ch = chapters.find(c => c.id === chId);
+  if (ch) loadAiChatHistory(ch);
   updateAiChapterLabel();
 };
 
