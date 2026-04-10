@@ -123,6 +123,12 @@ body {
 .chapter-item:hover .chapter-edit { visibility: visible; }
 .chapter-edit:hover { color: #1a73e8; }
 .tree-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
+.clear-all-btn {
+  display: inline-block; width: 100%; margin-top: 4px; padding: 6px;
+  background: #fff; border: 1px solid #e53935; border-radius: 6px;
+  font-size: 12px; cursor: pointer; text-align: center; color: #e53935;
+}
+.clear-all-btn:hover { background: #ffebee; }
 
 /* Settings */
 .settings { background: #fff; border: 1px solid #ddd; border-radius: 6px; padding: 10px; margin-bottom: 12px; }

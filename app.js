@@ -480,6 +480,27 @@ jsonExportBtn.addEventListener("click", exportAllJson);
 
 const jsonImportFile = document.getElementById("json-import-file");
 document.getElementById("json-import-btn").addEventListener("click", () => jsonImportFile.click());
+
+// Clear All — wipe all tree nodes and chapters for fresh import
+document.getElementById("clear-all-btn").addEventListener("click", () => {
+  if (!confirm("⚠️ Clear ALL data? This will remove all tree nodes, chapters, and AI chat history.\n\nYou can re-import from a JSON file afterward.")) return;
+  nodes = [];
+  chapters = [];
+  activeNodeId = null;
+  activeChapterId = null;
+  ensureCategories();
+  saveTree();
+  saveChapters();
+  renderTree();
+  renderChapters();
+  // Reset middle panel
+  document.getElementById("middle-empty").classList.remove("hidden");
+  chatArea.classList.add("hidden");
+  document.getElementById("preview-area").classList.add("hidden");
+  // Reset AI Writer
+  document.getElementById("ai-messages").innerHTML = "";
+  document.getElementById("ai-chapter-label").textContent = "No chapter selected";
+});
 jsonImportFile.addEventListener("change", (e) => {
   if (e.target.files[0]) { importJson(e.target.files[0]); e.target.value = ""; }
 });
