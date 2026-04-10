@@ -129,6 +129,10 @@ body {
 .tree-row.category-root { background: #f0f4ff; font-weight: 600; border-bottom: 1px solid #d0daf0; }
 .tree-row.category-root:hover { background: #e4ecff; }
 
+/* Drag-and-drop */
+.tree-row.dragging { opacity: 0.4; }
+.tree-row.drag-over { outline: 2px dashed #1a73e8; outline-offset: -2px; background: #e8f0fe; }
+
 /* Pin indicator bar */
 .pin-indicator {
   background: #fff8e1; border: 1px solid #ffe082; border-radius: 6px;

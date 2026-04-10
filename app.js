@@ -167,6 +167,30 @@ function removeNode(id, list = nodes) {
   return false;
 }
 
+// Move a node to become a child of a new parent (for drag-and-drop rearranging)
+function moveNodeToParent(nodeId, newParentId) {
+  const node = findNode(nodeId);
+  const newParent = findNode(newParentId);
+  if (!node || !newParent || node.isCategory) return;
+  // Prevent dropping onto self or own descendant
+  let check = newParent;
+  while (check) {
+    if (check.id === nodeId) return;
+    check = check.parentId ? findNode(check.parentId) : null;
+  }
+  // Detach from old parent
+  const oldParent = findNode(node.parentId);
+  if (!oldParent) return;
+  const idx = oldParent.children.indexOf(node);
+  if (idx === -1) return;
+  oldParent.children.splice(idx, 1);
+  // Attach to new parent
+  node.parentId = newParentId;
+  newParent.children.push(node);
+  saveTree();
+  renderTree();
+}
+
 // --- Persistence (localStorage) ---
 
 function saveTree() {
@@ -235,6 +259,34 @@ function renderNodeEl(node, depth) {
     + (node.id === targetParentId ? " pinned" : "")
     + (lastReadIds.has(node.id) ? " last-read" : prevReadIds.has(node.id) ? " prev-read" : "")
     + (node.isCategory ? " category-root" : "");
+
+  // Drag-and-drop for rearranging parent-child relationships
+  if (!node.isCategory) {
+    row.draggable = true;
+    row.addEventListener("dragstart", (e) => {
+      e.stopPropagation();
+      e.dataTransfer.setData("text/plain", node.id);
+      e.dataTransfer.effectAllowed = "move";
+      row.classList.add("dragging");
+    });
+    row.addEventListener("dragend", () => { row.classList.remove("dragging"); });
+  }
+  // All nodes (including categories) can be drop targets
+  row.addEventListener("dragover", (e) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    row.classList.add("drag-over");
+  });
+  row.addEventListener("dragleave", () => { row.classList.remove("drag-over"); });
+  row.addEventListener("drop", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    row.classList.remove("drag-over");
+    const draggedId = e.dataTransfer.getData("text/plain");
+    if (draggedId && draggedId !== node.id) {
+      moveNodeToParent(draggedId, node.id);
+    }
+  });
 
   const toggle = document.createElement("span");
   toggle.className = "tree-toggle";
