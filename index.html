@@ -35,40 +35,54 @@
     <span id="settings-status"></span>
   </div>
 
-  <!-- Tree view -->
-  <div id="tree-view">
-    <p class="hint">Click any category to start building your novel. Add child nodes to organize ideas.</p>
-    <div id="tree"></div>
-    <button id="export-btn" class="export-btn hidden">📄 Export</button>
-    <button id="preview-btn" class="preview-btn hidden">👁 Preview</button>
-    <button id="json-export-btn" class="export-btn hidden">💾 Export JSON</button>
-    <button id="json-import-btn" class="preview-btn">📂 Import JSON</button>
-    <input type="file" id="json-import-file" accept=".json" class="hidden">
-  </div>
+  <!-- Two-panel layout -->
+  <div class="main-layout">
+    <!-- Left panel: Tree structure -->
+    <div class="left-panel">
+      <div id="tree-view">
+        <p class="hint">Click any category to start building your novel.</p>
+        <div id="tree"></div>
+        <div class="tree-actions">
+          <button id="export-btn" class="export-btn hidden">📄 Export</button>
+          <button id="preview-btn" class="preview-btn hidden">👁 Preview</button>
+          <button id="json-export-btn" class="export-btn hidden">💾 JSON</button>
+          <button id="json-import-btn" class="preview-btn">📂 Import</button>
+          <input type="file" id="json-import-file" accept=".json" class="hidden">
+        </div>
+      </div>
+    </div>
 
-  <!-- Chat area -->
-  <div id="chat-area" class="hidden">
-    <div class="chat-header">
-      <button id="chat-back">← Back</button>
-      <span id="chat-breadcrumb"></span>
-    </div>
-    <div id="chat-snippet" class="snippet"></div>
-    <div id="chat-messages"></div>
-    <div class="chat-input-row">
-      <input type="text" id="chat-input" placeholder="Discuss plot, characters, worldbuilding...">
-      <button id="voice-btn" class="voice-btn" title="Voice input">🎤</button>
-      <button id="chat-send">Send</button>
-    </div>
-    <button id="branch-btn" class="branch-btn hidden">🌿 Branch selected text as child node</button>
-  </div>
+    <!-- Right panel: Chat / Content -->
+    <div class="right-panel">
+      <!-- Empty state -->
+      <div id="right-empty" class="right-empty">
+        <p>Select a node from the tree to start discussing your novel.</p>
+      </div>
 
-  <!-- Preview panel -->
-  <div id="preview-area" class="hidden">
-    <div class="chat-header">
-      <button id="preview-back">← Back</button>
-      <span>Preview Export</span>
+      <!-- Chat area -->
+      <div id="chat-area" class="hidden">
+        <div class="chat-header">
+          <span id="chat-breadcrumb"></span>
+        </div>
+        <div id="chat-snippet" class="snippet"></div>
+        <div id="chat-messages"></div>
+        <div class="chat-input-row">
+          <input type="text" id="chat-input" placeholder="Discuss plot, characters, worldbuilding...">
+          <button id="voice-btn" class="voice-btn" title="Voice input">🎤</button>
+          <button id="chat-send">Send</button>
+        </div>
+        <button id="branch-btn" class="branch-btn hidden">🌿 Branch selected text as child node</button>
+      </div>
+
+      <!-- Preview panel -->
+      <div id="preview-area" class="hidden">
+        <div class="chat-header">
+          <button id="preview-back">← Back</button>
+          <span>Preview Export</span>
+        </div>
+        <div id="preview-content" class="preview-content"></div>
+      </div>
     </div>
-    <div id="preview-content" class="preview-content"></div>
   </div>
 
   <script src="lib/katex.min.js"></script>

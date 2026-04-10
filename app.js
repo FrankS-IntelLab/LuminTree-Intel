@@ -319,16 +319,13 @@ function openChat(nodeId) {
   chatMessages.innerHTML = "";
   node.chatHistory.forEach(m => appendMsg(m.role, m.content, false, m.timestamp));
 
-  treeView.classList.add("hidden");
+  // Show chat in right panel (tree stays visible)
+  document.getElementById("right-empty").classList.add("hidden");
   chatArea.classList.remove("hidden");
+  document.getElementById("preview-area").classList.add("hidden");
   branchBtn.classList.add("hidden");
   chatInput.focus();
 }
-
-document.getElementById("chat-back").addEventListener("click", () => {
-  chatArea.classList.add("hidden");
-  treeView.classList.remove("hidden");
-});
 
 document.getElementById("chat-send").addEventListener("click", sendMessage);
 chatInput.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessage(); });
@@ -567,7 +564,12 @@ previewBtn.addEventListener("click", () => showPreview(nodes));
 
 document.getElementById("preview-back").addEventListener("click", () => {
   document.getElementById("preview-area").classList.add("hidden");
-  treeView.classList.remove("hidden");
+  // Restore chat or empty state
+  if (activeNodeId) {
+    chatArea.classList.remove("hidden");
+  } else {
+    document.getElementById("right-empty").classList.remove("hidden");
+  }
 });
 
 const jsonExportBtn = document.getElementById("json-export-btn");
@@ -604,7 +606,7 @@ async function showPreview(rootNodes) {
   }
 
   previewContent.innerHTML = html;
-  treeView.classList.add("hidden");
+  document.getElementById("right-empty").classList.add("hidden");
   chatArea.classList.add("hidden");
   previewArea.classList.remove("hidden");
 }
