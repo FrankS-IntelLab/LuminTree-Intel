@@ -26,11 +26,50 @@ body {
 /* Two-panel layout */
 .main-layout { display: flex; flex: 1; gap: 12px; min-height: 0; overflow: hidden; }
 .left-panel {
-  width: 320px; min-width: 260px; max-width: 400px;
+  width: 280px; min-width: 220px; max-width: 360px;
   overflow-y: auto; border-right: 1px solid #ddd; padding-right: 12px; flex-shrink: 0;
 }
-.right-panel { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-.right-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 14px; }
+.middle-panel { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.right-panel {
+  width: 260px; min-width: 200px; max-width: 340px;
+  overflow-y: auto; border-left: 1px solid #ddd; padding-left: 12px; flex-shrink: 0;
+  display: flex; flex-direction: column;
+}
+.panel-empty { flex: 1; display: flex; align-items: center; justify-content: center; color: #aaa; font-size: 13px; text-align: center; }
+
+/* Chapter panel */
+.chapter-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 8px; padding-bottom: 6px; border-bottom: 1px solid #e0e0e0;
+}
+.chapter-panel-header h3 { font-size: 14px; font-weight: 600; margin: 0; }
+#add-chapter-btn {
+  background: none; border: 1px solid #a5d6a7; color: #2e7d32; font-size: 16px;
+  width: 26px; height: 26px; border-radius: 4px; cursor: pointer; font-weight: bold;
+  display: flex; align-items: center; justify-content: center;
+}
+#add-chapter-btn:hover { background: #e8f5e9; }
+
+.chapter-item {
+  display: flex; align-items: center; gap: 6px; padding: 6px 8px;
+  border-radius: 4px; cursor: pointer; font-size: 13px; margin-bottom: 2px;
+}
+.chapter-item:hover { background: #eee; }
+.chapter-item.active { background: #e8f0fe; border-left: 3px solid #1a73e8; }
+.chapter-number { font-weight: 600; color: #1a73e8; flex-shrink: 0; min-width: 28px; }
+.chapter-title { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.chapter-del {
+  background: none; border: none; color: #bbb; font-size: 12px; cursor: pointer;
+  padding: 0 2px; visibility: hidden;
+}
+.chapter-item:hover .chapter-del { visibility: visible; }
+.chapter-del:hover { color: #e53935; }
+.chapter-edit {
+  background: none; border: none; color: #bbb; font-size: 12px; cursor: pointer;
+  padding: 0 2px; visibility: hidden;
+}
+.chapter-item:hover .chapter-edit { visibility: visible; }
+.chapter-edit:hover { color: #1a73e8; }
 .tree-actions { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 12px; }
 
 /* Settings */

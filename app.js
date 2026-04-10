@@ -316,8 +316,10 @@ function openChat(nodeId) {
   const node = findNode(nodeId);
   if (!node) return;
   activeNodeId = nodeId;
+  activeChapterId = null; // deselect chapter
   node.lastAccessedAt = new Date().toISOString();
   saveTree();
+  renderChapters();
 
   const ancestors = getAncestors(nodeId);
   chatBreadcrumb.textContent = ancestors.map(n => truncate(n.title, 20)).join(" → ");
@@ -327,27 +329,14 @@ function openChat(nodeId) {
   const editor = document.getElementById("node-editor");
   editor.value = node.fullText || "";
 
-  // Show editor in right panel (tree stays visible)
-  document.getElementById("right-empty").classList.add("hidden");
+  // Show editor in middle panel
+  document.getElementById("middle-empty").classList.add("hidden");
   chatArea.classList.remove("hidden");
   document.getElementById("preview-area").classList.add("hidden");
   editor.focus();
 }
 
-// Save editor content back to node
-document.getElementById("editor-save").addEventListener("click", () => {
-  if (!activeNodeId) return;
-  const node = findNode(activeNodeId);
-  if (!node) return;
-  const editor = document.getElementById("node-editor");
-  node.fullText = editor.value;
-  saveTree();
-  // Visual feedback
-  const btn = document.getElementById("editor-save");
-  const orig = btn.textContent;
-  btn.textContent = "✓ Saved";
-  setTimeout(() => btn.textContent = orig, 1500);
-});
+// Save handled by unified editor-save listener below (supports both tree nodes and chapters)
 
 // --- Settings (localStorage) ---
 
@@ -404,7 +393,7 @@ document.getElementById("preview-back").addEventListener("click", () => {
   if (activeNodeId) {
     chatArea.classList.remove("hidden");
   } else {
-    document.getElementById("right-empty").classList.remove("hidden");
+    document.getElementById("middle-empty").classList.remove("hidden");
   }
 });
 
@@ -441,7 +430,7 @@ async function showPreview(rootNodes) {
   }
 
   previewContent.innerHTML = html;
-  document.getElementById("right-empty").classList.add("hidden");
+  document.getElementById("middle-empty").classList.add("hidden");
   chatArea.classList.add("hidden");
   previewArea.classList.remove("hidden");
 }
@@ -554,3 +543,112 @@ function downloadFile(filename, content) {
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+
+// === Chapter Organization Panel ===
+
+let chapters = [];
+let activeChapterId = null;
+
+function loadChapters() {
+  try { chapters = JSON.parse(localStorage.getItem("lumintree_chapters")) || []; } catch { chapters = []; }
+  renderChapters();
+}
+
+function saveChapters() {
+  try { localStorage.setItem("lumintree_chapters", JSON.stringify(chapters)); } catch {}
+}
+
+function renderChapters() {
+  const list = document.getElementById("chapter-list");
+  const empty = document.getElementById("chapter-empty");
+  list.innerHTML = "";
+  if (chapters.length === 0) { empty.classList.remove("hidden"); return; }
+  empty.classList.add("hidden");
+
+  chapters.forEach((ch, i) => {
+    const item = document.createElement("div");
+    item.className = "chapter-item" + (ch.id === activeChapterId ? " active" : "");
+
+    const num = document.createElement("span");
+    num.className = "chapter-number";
+    num.textContent = `${i + 1}.`;
+
+    const title = document.createElement("span");
+    title.className = "chapter-title";
+    title.textContent = ch.title;
+    title.addEventListener("click", () => openChapterInEditor(ch.id));
+
+    const edit = document.createElement("button");
+    edit.className = "chapter-edit";
+    edit.textContent = "✏️";
+    edit.title = "Rename";
+    edit.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const newTitle = prompt("Rename chapter:", ch.title);
+      if (newTitle && newTitle.trim()) { ch.title = newTitle.trim(); saveChapters(); renderChapters(); }
+    });
+
+    const del = document.createElement("button");
+    del.className = "chapter-del";
+    del.textContent = "✕";
+    del.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (confirm(`Delete "${ch.title}"?`)) {
+        chapters.splice(i, 1);
+        if (activeChapterId === ch.id) activeChapterId = null;
+        saveChapters(); renderChapters();
+      }
+    });
+
+    item.appendChild(num);
+    item.appendChild(title);
+    item.appendChild(edit);
+    item.appendChild(del);
+    list.appendChild(item);
+  });
+}
+
+function openChapterInEditor(chId) {
+  const ch = chapters.find(c => c.id === chId);
+  if (!ch) return;
+  activeChapterId = chId;
+  activeNodeId = null; // deselect tree node
+
+  chatBreadcrumb.textContent = `📚 ${ch.title}`;
+  chatSnippet.textContent = ch.title;
+
+  const editor = document.getElementById("node-editor");
+  editor.value = ch.content || "";
+
+  document.getElementById("middle-empty").classList.add("hidden");
+  chatArea.classList.remove("hidden");
+  document.getElementById("preview-area").classList.add("hidden");
+  editor.focus();
+  renderChapters();
+}
+
+document.getElementById("add-chapter-btn").addEventListener("click", () => {
+  const title = prompt("Chapter title:", `Chapter ${chapters.length + 1}`);
+  if (title && title.trim()) {
+    chapters.push({ id: genId(), title: title.trim(), content: "" });
+    saveChapters(); renderChapters();
+  }
+});
+
+// Patch editor save to handle both tree nodes and chapters
+document.getElementById("editor-save").addEventListener("click", () => {
+  const editor = document.getElementById("node-editor");
+  if (activeChapterId) {
+    const ch = chapters.find(c => c.id === activeChapterId);
+    if (ch) { ch.content = editor.value; saveChapters(); }
+  } else if (activeNodeId) {
+    const node = findNode(activeNodeId);
+    if (node) { node.fullText = editor.value; saveTree(); }
+  } else return;
+  const btn = document.getElementById("editor-save");
+  const orig = btn.textContent;
+  btn.textContent = "✓ Saved";
+  setTimeout(() => btn.textContent = orig, 1500);
+});
+
+loadChapters();

@@ -52,14 +52,12 @@
       </div>
     </div>
 
-    <!-- Right panel: Chat / Content -->
-    <div class="right-panel">
-      <!-- Empty state -->
-      <div id="right-empty" class="right-empty">
-        <p>Select a node from the tree to start discussing your novel.</p>
+    <!-- Middle panel: Editor / Content -->
+    <div class="middle-panel">
+      <div id="middle-empty" class="panel-empty">
+        <p>Select a node from the tree to edit.</p>
       </div>
 
-      <!-- Editor area -->
       <div id="chat-area" class="hidden">
         <div class="chat-header">
           <span id="chat-breadcrumb"></span>
@@ -71,13 +69,24 @@
         </div>
       </div>
 
-      <!-- Preview panel -->
       <div id="preview-area" class="hidden">
         <div class="chat-header">
           <button id="preview-back">← Back</button>
           <span>Preview Export</span>
         </div>
         <div id="preview-content" class="preview-content"></div>
+      </div>
+    </div>
+
+    <!-- Right panel: Chapter Organization -->
+    <div class="right-panel">
+      <div class="chapter-panel-header">
+        <h3>📚 Chapters</h3>
+        <button id="add-chapter-btn" title="Add chapter">+</button>
+      </div>
+      <div id="chapter-list"></div>
+      <div id="chapter-empty" class="panel-empty">
+        <p>Click + to add your first chapter.</p>
       </div>
     </div>
   </div>
