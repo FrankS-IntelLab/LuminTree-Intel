@@ -505,6 +505,104 @@ jsonImportFile.addEventListener("change", (e) => {
   if (e.target.files[0]) { importJson(e.target.files[0]); e.target.value = ""; }
 });
 
+// === Smart Import — AI-powered JSON transformation ===
+const smartImportFile = document.getElementById("smart-import-file");
+document.getElementById("smart-import-btn").addEventListener("click", () => smartImportFile.click());
+smartImportFile.addEventListener("change", (e) => {
+  if (e.target.files[0]) { smartImport(e.target.files[0]); e.target.value = ""; }
+});
+
+async function smartImport(file) {
+  const cfg = getConfig();
+  if (!cfg.url || !cfg.key) { alert("Configure your API settings first (⚙️ button)."); return; }
+
+  const text = await file.text();
+  let rawJson;
+  try { rawJson = JSON.parse(text); } catch { alert("Invalid JSON file."); return; }
+
+  const catSchema = CATEGORIES.map(c => `  "${c.id}": { title: "${c.title}", children: [ { title: "...", fullText: "..." }, ... ] }`).join(",\n");
+
+  const systemPrompt = `You are a JSON transformation assistant. The user will provide a JSON file with novel/story configuration data. Its structure or naming may differ from the target format.
+
+Your job: transform the input into the EXACT target format below. Map each piece of content to the correct category by meaning, not by name. If a field doesn't fit any category, put it in "writing-materials".
+
+Target format (output ONLY valid JSON, no markdown, no explanation):
+{
+  "nodes": [
+${catSchema}
+  ],
+  "chapters": [
+    { "id": "unique_id", "title": "Chapter Title", "content": "chapter text..." }
+  ]
+}
+
+Rules:
+- Each node in "nodes" must have: categoryId (matching the id above), isCategory: true, title, fullText (empty string if none), children (array of child nodes)
+- Each child node must have: id (generate unique), parentId (the category id), title, fullText (the content), children: [], timestamp (ISO string)
+- Map content intelligently: world/setting → "worldview", characters → "character-library", plot/story arcs → "plot-framework", concept/theme/genre → "core-concept", chapter plans → "chapter-structure", style/references/materials → "writing-materials"
+- If the input has chapter content, include it in "chapters" array
+- Preserve ALL content from the input — do not drop anything
+- Output ONLY the JSON object, nothing else`;
+
+  const userMsg = JSON.stringify(rawJson, null, 2);
+
+  // Show progress
+  const btn = document.getElementById("smart-import-btn");
+  const origText = btn.textContent;
+  btn.textContent = "⏳ AI processing...";
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({
+        model: cfg.model || "gpt-4o-mini",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userMsg }
+        ],
+        temperature: 0.1
+      })
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    let reply = data.choices?.[0]?.message?.content || "";
+
+    // Strip markdown code fences if present
+    reply = reply.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+
+    const transformed = JSON.parse(reply);
+
+    // Import the transformed data
+    if (transformed.nodes && Array.isArray(transformed.nodes)) {
+      for (const imp of transformed.nodes) {
+        if (imp.isCategory && imp.categoryId) {
+          const existing = nodes.find(n => n.categoryId === imp.categoryId && n.isCategory);
+          if (existing) { existing.children.push(...(imp.children || [])); continue; }
+        }
+        nodes.push(imp);
+      }
+    }
+    if (transformed.chapters && Array.isArray(transformed.chapters)) {
+      for (const ch of transformed.chapters) {
+        if (!chapters.find(c => c.id === ch.id)) chapters.push(ch);
+      }
+      saveChapters();
+    }
+    ensureCategories();
+    saveTree();
+    renderTree();
+    renderChapters();
+    alert("✅ Smart Import complete! Data has been mapped to the correct categories.");
+  } catch (err) {
+    alert("Smart Import failed: " + err.message);
+  } finally {
+    btn.textContent = origText;
+    btn.disabled = false;
+  }
+}
+
 mermaid.initialize({ startOnLoad: false, theme: "default" });
 
 async function showPreview(rootNodes) {
