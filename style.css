@@ -54,6 +54,11 @@ body {
 }
 .ai-panel-header h3 { font-size: 14px; font-weight: 600; margin: 0; }
 .ai-chapter-label { font-size: 11px; color: #888; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 160px; }
+.ai-clear-btn {
+  background: none; border: 1px solid #e53935; color: #e53935; font-size: 11px;
+  padding: 2px 8px; border-radius: 4px; cursor: pointer; flex-shrink: 0;
+}
+.ai-clear-btn:hover { background: #ffebee; }
 .ai-messages {
   flex: 1; overflow-y: auto; margin-bottom: 8px;
   display: flex; flex-direction: column; gap: 6px;

@@ -1050,6 +1050,16 @@ aiInput.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAiMessage(); }
 });
 
+// Clear memory button — wipes AI chat history for current chapter
+document.getElementById("ai-clear-btn").addEventListener("click", () => {
+  const ch = getSelectedChapter();
+  if (!ch) return;
+  if (!confirm(`Clear all AI Writer memory for "${ch.title}"? The AI will forget everything discussed.`)) return;
+  aiChatHistory = [];
+  aiMessages.innerHTML = "";
+  saveAiChatHistory();
+});
+
 // Load AI chat history when switching chapters
 const _origOpenChapter = openChapterInEditor;
 openChapterInEditor = function(chId) {
