@@ -955,6 +955,18 @@ function buildNovelContext() {
 
 function buildSystemPrompt(chapter) {
   const novelContext = buildNovelContext();
+  // Extract writing materials section specifically for emphasis
+  const wmNode = nodes.find(n => n.categoryId === "writing-materials");
+  let wmContext = "";
+  if (wmNode && wmNode.children.length > 0) {
+    const lines = [];
+    wmNode.children.forEach(c => {
+      const text = c.fullText ? `: ${c.fullText}` : "";
+      lines.push(`- ${c.title}${text}`);
+    });
+    wmContext = lines.join("\n");
+  }
+
   return `You are an expert novel writing assistant for the project "${document.title}".
 
 Below is the complete novel structure the author has built — including core concept, worldview, plot framework, characters, chapter structure, and writing materials:
@@ -963,13 +975,14 @@ ${novelContext}
 
 The author is currently working on: "${chapter.title}"
 ${chapter.content ? `\nExisting draft for this chapter:\n${chapter.content}` : "\nThis chapter has no draft yet."}
-
+${wmContext ? `\n⚠️ CRITICAL — Writing Material Library directives (MUST follow strictly in ALL output):\n${wmContext}\n` : ""}
 Your job:
 - Write, expand, or revise chapter content based on the author's instructions
 - Stay consistent with the established worldview, characters, plot, and tone
 - Respect the chapter structure and how this chapter connects to others
-- Write in a literary, engaging style unless the author specifies otherwise
-- When asked to write, produce actual prose — not outlines or summaries`;
+- **STRICTLY follow ALL style, tone, and writing directives defined in the Writing Material Library** — if it says dramatic, write dramatically; if it says pragmatic, write pragmatically; these directives override any default style
+- When asked to write, produce actual prose — not outlines or summaries
+- Every piece of output you generate must conform to the writing style requirements specified by the author in the Writing Material Library`;
 }
 
 function updateAiChapterLabel() {
