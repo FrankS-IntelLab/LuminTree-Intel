@@ -314,18 +314,6 @@ function renderNodeEl(node, depth) {
   ts.className = "tree-time";
   ts.textContent = node.isCategory ? "" : formatTime(node.timestamp);
 
-  const exp = document.createElement("button");
-  exp.className = "tree-export";
-  exp.textContent = "👁";
-  exp.title = "Preview this branch";
-  exp.addEventListener("click", (e) => { e.stopPropagation(); showPreview([node]); });
-
-  const dl = document.createElement("button");
-  dl.className = "tree-export";
-  dl.textContent = "📥";
-  dl.title = "Download this branch (Markdown)";
-  dl.addEventListener("click", (e) => { e.stopPropagation(); exportBranch(node); });
-
   const jsonDl = document.createElement("button");
   jsonDl.className = "tree-export";
   jsonDl.textContent = "💾";
@@ -366,12 +354,30 @@ function renderNodeEl(node, depth) {
   row.appendChild(toggle);
   row.appendChild(label);
   row.appendChild(ts);
-  row.appendChild(exp);
-  row.appendChild(dl);
   row.appendChild(jsonDl);
   row.appendChild(addChild);
   row.appendChild(pin);
   row.appendChild(del);
+
+  // Import JSON button for chapter-structure category
+  if (node.isCategory && node.categoryId === "chapter-structure") {
+    const impBtn = document.createElement("button");
+    impBtn.className = "tree-add";
+    impBtn.textContent = "📂";
+    impBtn.title = "Import chapters from JSON";
+    impBtn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const input = document.createElement("input");
+      input.type = "file"; input.accept = ".json"; input.style.display = "none";
+      input.addEventListener("change", () => {
+        if (input.files[0]) importChaptersJson(input.files[0]);
+      });
+      document.body.appendChild(input);
+      input.click();
+      input.remove();
+    });
+    row.appendChild(impBtn);
+  }
   wrap.appendChild(row);
 
   if (node.children.length > 0) {
@@ -704,6 +710,45 @@ function importJson(file) {
       renderChapters();
     } catch (e) {
       alert("Import failed: " + e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+// Import chapters from JSON into chapter-structure and chapters panel
+function importChaptersJson(file) {
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const imported = JSON.parse(reader.result);
+      // Accept array of chapters or { chapters: [...] }
+      const chList = Array.isArray(imported) ? imported : (imported.chapters || []);
+      const csRoot = findNode("chapter-structure");
+      for (const ch of chList) {
+        const id = ch.id || genId();
+        const title = ch.title || "Untitled Chapter";
+        const content = ch.content || "";
+        // Add to chapters panel
+        if (!chapters.find(c => c.id === id)) {
+          chapters.push({ id, title, content });
+        }
+        // Add linked tree node under chapter-structure
+        if (csRoot && !csRoot.children.find(c => c.chapterId === id)) {
+          csRoot.children.push({
+            id, parentId: "chapter-structure", categoryId: null,
+            title, fullText: ch.notes || ch.structure || "",
+            timestamp: new Date().toISOString(),
+            children: [], chatHistory: [], chapterId: id
+          });
+        }
+      }
+      saveChapters();
+      saveTree();
+      renderTree();
+      renderChapters();
+      alert(`✅ Imported ${chList.length} chapter(s).`);
+    } catch (e) {
+      alert("Chapter import failed: " + e.message);
     }
   };
   reader.readAsText(file);
