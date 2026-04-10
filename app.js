@@ -16,7 +16,7 @@ const CATEGORIES = [
   { id: "worldview", title: "🌍 Worldview Setting", icon: "🌍", placeholder: "World rules, geography, magic systems, technology, history, factions..." },
   { id: "plot-framework", title: "📐 Plot Framework", icon: "📐", placeholder: "Story arcs, turning points, act structure, subplot threads..." },
   { id: "character-library", title: "👤 Character Profile Library", icon: "👤", placeholder: "Character bios, motivations, relationships, voice notes, OOC boundaries..." },
-  { id: "chapter-structure", title: "📑 Chapter Structure", icon: "📑", placeholder: "Chapter outlines, scene breakdowns, pacing notes, POV assignments..." },
+  { id: "chapter-structure", title: "📑 Chapter Structure", icon: "📑", placeholder: "Governs chapter organization. Each child node links to a chapter in the right panel. Use to plan: how chapters end/begin, non-linear timeline, scene transitions, POV shifts, pacing across chapters..." },
   { id: "writing-materials", title: "🗂 Writing Material Library", icon: "🗂", placeholder: "Reference snippets, inspiration, research notes, style references..." }
 ];
 
@@ -100,8 +100,18 @@ function addNode(text, parentId = null) {
   };
   const parent = findNode(finalParent);
   if (parent) parent.children.push(node);
+
+  // If adding under chapter-structure, also create a linked chapter in right panel
+  if (getNodeCategory(node) === "chapter-structure" && !node.isCategory) {
+    node.chapterId = node.id; // link: tree node id = chapter id
+    const ch = { id: node.id, title: node.title, content: "" };
+    chapters.push(ch);
+    saveChapters();
+  }
+
   saveTree();
   renderTree();
+  renderChapters();
   generateTitle(node);
   return node;
 }
@@ -128,8 +138,14 @@ async function generateTitle(node) {
     const title = data.choices?.[0]?.message?.content?.trim();
     if (title) {
       node.title = title.replace(/^["']|["']$/g, "");
+      // Sync title to linked chapter if exists
+      if (node.chapterId) {
+        const ch = chapters.find(c => c.id === node.chapterId);
+        if (ch) { ch.title = node.title; saveChapters(); }
+      }
       saveTree();
       renderTree();
+      renderChapters();
     }
   } catch {}
 }
@@ -138,7 +154,13 @@ function removeNode(id, list = nodes) {
   for (let i = 0; i < list.length; i++) {
     if (list[i].id === id) {
       if (list[i].isCategory) return false;
-      list.splice(i, 1); saveTree(); renderTree(); return true;
+      // Remove linked chapter if exists
+      if (list[i].chapterId) {
+        const ci = chapters.findIndex(c => c.id === list[i].chapterId);
+        if (ci !== -1) { chapters.splice(ci, 1); saveChapters(); }
+        if (activeChapterId === list[i].chapterId) activeChapterId = null;
+      }
+      list.splice(i, 1); saveTree(); renderTree(); renderChapters(); return true;
     }
     if (removeNode(id, list[i].children)) return true;
   }
@@ -232,8 +254,8 @@ function renderNodeEl(node, depth) {
 
   const label = document.createElement("span");
   label.className = "tree-label";
-  label.textContent = node.title;
-  label.title = node.fullText;
+  label.textContent = (node.chapterId ? "🔗 " : "") + node.title;
+  label.title = node.chapterId ? `Linked to chapter panel — click to edit structure notes` : node.fullText;
   label.addEventListener("click", () => openChat(node.id));
 
   const ts = document.createElement("span");
@@ -545,6 +567,17 @@ function downloadFile(filename, content) {
 }
 
 // === Chapter Organization Panel ===
+// Chapters are linked to tree nodes under "chapter-structure" category.
+// - Left tree node (chapter-structure child): planning notes — how chapters connect, transitions, non-linear timeline
+// - Right panel chapter: actual chapter content/writing
+// Creating/deleting/renaming from either side syncs to the other.
+
+function removeLinkedTreeNode(chapterId) {
+  const csRoot = findNode("chapter-structure");
+  if (!csRoot) return;
+  const idx = csRoot.children.findIndex(n => n.chapterId === chapterId);
+  if (idx !== -1) { csRoot.children.splice(idx, 1); saveTree(); }
+}
 
 let chapters = [];
 let activeChapterId = null;
@@ -585,7 +618,13 @@ function renderChapters() {
     edit.addEventListener("click", (e) => {
       e.stopPropagation();
       const newTitle = prompt("Rename chapter:", ch.title);
-      if (newTitle && newTitle.trim()) { ch.title = newTitle.trim(); saveChapters(); renderChapters(); }
+      if (newTitle && newTitle.trim()) {
+        ch.title = newTitle.trim();
+        // Sync title to linked tree node
+        const linked = findNode(ch.id);
+        if (linked && linked.chapterId === ch.id) { linked.title = ch.title; saveTree(); }
+        saveChapters(); renderTree(); renderChapters();
+      }
     });
 
     const del = document.createElement("button");
@@ -596,7 +635,9 @@ function renderChapters() {
       if (confirm(`Delete "${ch.title}"?`)) {
         chapters.splice(i, 1);
         if (activeChapterId === ch.id) activeChapterId = null;
-        saveChapters(); renderChapters();
+        // Remove linked tree node
+        removeLinkedTreeNode(ch.id);
+        saveChapters(); renderTree(); renderChapters();
       }
     });
 
@@ -630,8 +671,23 @@ function openChapterInEditor(chId) {
 document.getElementById("add-chapter-btn").addEventListener("click", () => {
   const title = prompt("Chapter title:", `Chapter ${chapters.length + 1}`);
   if (title && title.trim()) {
-    chapters.push({ id: genId(), title: title.trim(), content: "" });
-    saveChapters(); renderChapters();
+    const t = title.trim();
+    const id = genId();
+    // Create chapter
+    chapters.push({ id, title: t, content: "" });
+    saveChapters();
+    // Create linked tree node under chapter-structure
+    const csRoot = findNode("chapter-structure");
+    if (csRoot) {
+      csRoot.children.push({
+        id, parentId: "chapter-structure", categoryId: null,
+        title: t, fullText: "",
+        timestamp: new Date().toISOString(),
+        children: [], chatHistory: [], chapterId: id
+      });
+      saveTree();
+    }
+    renderTree(); renderChapters();
   }
 });
 
