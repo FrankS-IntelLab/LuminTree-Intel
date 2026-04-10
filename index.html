@@ -92,6 +92,19 @@
         <p>Click + to add your first chapter.</p>
       </div>
     </div>
+
+    <!-- AI Chat panel -->
+    <div class="ai-panel">
+      <div class="ai-panel-header">
+        <h3>🤖 AI Writer</h3>
+        <span id="ai-chapter-label" class="ai-chapter-label">No chapter selected</span>
+      </div>
+      <div id="ai-messages" class="ai-messages"></div>
+      <div class="ai-input-row">
+        <textarea id="ai-input" placeholder="Ask AI to write, expand, or revise this chapter..." rows="2"></textarea>
+        <button id="ai-send-btn" title="Send">▶</button>
+      </div>
+    </div>
   </div>
 
   <script src="lib/katex.min.js"></script>

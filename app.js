@@ -761,6 +761,131 @@ document.getElementById("editor-save").addEventListener("click", () => {
 
 loadChapters();
 
+// === AI Writer Chat Panel ===
+const aiMessages = document.getElementById("ai-messages");
+const aiInput = document.getElementById("ai-input");
+const aiSendBtn = document.getElementById("ai-send-btn");
+const aiChapterLabel = document.getElementById("ai-chapter-label");
+let aiChatHistory = []; // per-session chat history
+
+function getSelectedChapter() {
+  if (activeChapterId) return chapters.find(c => c.id === activeChapterId) || null;
+  return null;
+}
+
+function buildNovelContext() {
+  const sections = [];
+  for (const cat of nodes) {
+    const lines = [];
+    (function collect(node, depth) {
+      const prefix = "  ".repeat(depth);
+      const text = node.fullText ? `: ${node.fullText}` : "";
+      lines.push(`${prefix}- ${node.title}${text}`);
+      node.children.forEach(c => collect(c, depth + 1));
+    })(cat, 0);
+    sections.push(lines.join("\n"));
+  }
+  return sections.join("\n\n");
+}
+
+function buildSystemPrompt(chapter) {
+  const novelContext = buildNovelContext();
+  return `You are an expert novel writing assistant for the project "${document.title}".
+
+Below is the complete novel structure the author has built — including core concept, worldview, plot framework, characters, chapter structure, and writing materials:
+
+${novelContext}
+
+The author is currently working on: "${chapter.title}"
+${chapter.content ? `\nExisting draft for this chapter:\n${chapter.content}` : "\nThis chapter has no draft yet."}
+
+Your job:
+- Write, expand, or revise chapter content based on the author's instructions
+- Stay consistent with the established worldview, characters, plot, and tone
+- Respect the chapter structure and how this chapter connects to others
+- Write in a literary, engaging style unless the author specifies otherwise
+- When asked to write, produce actual prose — not outlines or summaries`;
+}
+
+function updateAiChapterLabel() {
+  const ch = getSelectedChapter();
+  aiChapterLabel.textContent = ch ? `📖 ${ch.title}` : "No chapter selected";
+}
+
+function appendAiMessage(role, content) {
+  const div = document.createElement("div");
+  div.className = `ai-msg ai-msg-${role}`;
+  if (role === "assistant") {
+    div.innerHTML = typeof marked !== "undefined" ? marked.parse(content) : content.replace(/\n/g, "<br>");
+  } else {
+    div.textContent = content;
+  }
+  aiMessages.appendChild(div);
+  aiMessages.scrollTop = aiMessages.scrollHeight;
+  return div;
+}
+
+async function sendAiMessage() {
+  const ch = getSelectedChapter();
+  if (!ch) { alert("Select a chapter first (click a chapter in the Chapters panel)."); return; }
+  const text = aiInput.value.trim();
+  if (!text) return;
+  const cfg = getConfig();
+  if (!cfg.url || !cfg.key) { alert("Configure your API settings first (⚙️ button)."); return; }
+
+  aiInput.value = "";
+  appendAiMessage("user", text);
+  aiChatHistory.push({ role: "user", content: text });
+
+  const thinkingEl = appendAiMessage("thinking", "Writing...");
+  thinkingEl.classList.add("ai-msg-thinking");
+  aiSendBtn.disabled = true;
+
+  try {
+    const systemPrompt = buildSystemPrompt(ch);
+    const messages = [{ role: "system", content: systemPrompt }, ...aiChatHistory];
+    const res = await fetch(cfg.url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${cfg.key}` },
+      body: JSON.stringify({ model: cfg.model || "gpt-4o-mini", messages })
+    });
+    if (!res.ok) throw new Error(`API error: ${res.status}`);
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || "(No response)";
+
+    thinkingEl.remove();
+    appendAiMessage("assistant", reply);
+    aiChatHistory.push({ role: "assistant", content: reply });
+  } catch (err) {
+    thinkingEl.remove();
+    appendAiMessage("assistant", `⚠️ Error: ${err.message}`);
+  } finally {
+    aiSendBtn.disabled = false;
+    aiInput.focus();
+  }
+}
+
+aiSendBtn.addEventListener("click", sendAiMessage);
+aiInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendAiMessage(); }
+});
+
+// Clear AI chat history when switching chapters
+const _origOpenChapter = openChapterInEditor;
+openChapterInEditor = function(chId) {
+  _origOpenChapter(chId);
+  aiChatHistory = [];
+  aiMessages.innerHTML = "";
+  updateAiChapterLabel();
+};
+
+// Update label when tree node selected (deselects chapter)
+const _origOpenChat = openChat;
+openChat = function(nodeId) {
+  _origOpenChat(nodeId);
+  updateAiChapterLabel();
+};
+
 // === Resize Handle for Left Panel ===
 (function() {
   const handle = document.getElementById("resize-handle");
