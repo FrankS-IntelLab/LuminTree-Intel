@@ -1305,15 +1305,35 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
 // Voice input for AI Writer
 (function() {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) return;
   const btn = document.getElementById("ai-voice-btn");
+  if (!btn) return;
+
+  if (!SpeechRecognition) {
+    btn.title = "Voice input not supported in this browser";
+    btn.style.opacity = "0.4";
+    btn.addEventListener("click", () => alert("Voice input is not supported in this browser."));
+    return;
+  }
+
+  if (location.protocol === "file:") {
+    btn.title = "Voice input requires http://localhost — run: python3 -m http.server 8080";
+    btn.addEventListener("click", () => alert("⚠️ Voice input requires HTTP.\n\nRun this command in the project folder:\n  python3 -m http.server 8080\n\nThen open http://localhost:8080"));
+    return;
+  }
+
   const target = document.getElementById("ai-input");
   let recognition = null;
   let lang = "en-US";
 
+  function stopRecording() {
+    if (recognition) { try { recognition.abort(); } catch(e) {} }
+    btn.classList.remove("recording");
+    recognition = null;
+  }
+
   btn.addEventListener("click", (e) => {
     if (e.detail >= 2) return;
-    if (recognition) { recognition.stop(); return; }
+    if (recognition) { stopRecording(); return; }
     const rec = new SpeechRecognition();
     rec.continuous = true;
     rec.interimResults = true;
@@ -1337,7 +1357,7 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
       target.focus();
       recognition = null;
     };
-    rec.onerror = () => { btn.classList.remove("recording"); recognition = null; };
+    rec.onerror = (e) => { console.warn("Speech error:", e.error); stopRecording(); };
     recognition = rec;
     btn.classList.add("recording");
     rec.start();
@@ -1347,7 +1367,7 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
     e.preventDefault();
     lang = lang === "en-US" ? "zh-CN" : "en-US";
     btn.title = `Voice input (${lang === "en-US" ? "English" : "中文"}) — double-click to switch`;
-    if (recognition) { recognition.stop(); setTimeout(() => btn.click(), 300); }
+    if (recognition) { stopRecording(); setTimeout(() => btn.click(), 300); }
   });
 })();
 
