@@ -1302,45 +1302,34 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
   saveAiChatHistory();
 });
 
-// Voice input for AI Writer
-(function() {
+// Voice input setup (reusable for any btn + textarea pair)
+function initVoiceInput(btnId, targetId) {
   const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const btn = document.getElementById("ai-voice-btn");
+  const btn = document.getElementById(btnId);
   if (!btn) return;
-
   if (!SpeechRecognition) {
     btn.title = "Voice input not supported in this browser";
     btn.style.opacity = "0.4";
     btn.addEventListener("click", () => alert("Voice input is not supported in this browser."));
     return;
   }
-
   if (location.protocol === "file:") {
     btn.title = "Voice input requires http://localhost — run: python3 -m http.server 8080";
     btn.addEventListener("click", () => alert("⚠️ Voice input requires HTTP.\n\nRun this command in the project folder:\n  python3 -m http.server 8080\n\nThen open http://localhost:8080"));
     return;
   }
-
-  const target = document.getElementById("ai-input");
-  let recognition = null;
-  let lang = "en-US";
-
+  const target = document.getElementById(targetId);
+  let recognition = null, lang = "en-US";
   function stopRecording() {
     if (recognition) { try { recognition.abort(); } catch(e) {} }
-    btn.classList.remove("recording");
-    btn.textContent = "🎤";
-    recognition = null;
+    btn.classList.remove("recording"); btn.textContent = "🎤"; recognition = null;
   }
-
   btn.addEventListener("click", (e) => {
     if (e.detail >= 2) return;
     if (recognition) { stopRecording(); return; }
     const rec = new SpeechRecognition();
-    rec.continuous = true;
-    rec.interimResults = true;
-    rec.lang = lang;
-    const base = target.value;
-    const pos = target.selectionStart || target.value.length;
+    rec.continuous = true; rec.interimResults = true; rec.lang = lang;
+    const base = target.value, pos = target.selectionStart || target.value.length;
     let finalText = "";
     rec.onresult = (ev) => {
       let interim = ""; finalText = "";
@@ -1351,28 +1340,19 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
       target.value = base.substring(0, pos) + finalText + interim + base.substring(pos);
       target.setSelectionRange(pos + finalText.length + interim.length, pos + finalText.length + interim.length);
     };
-    rec.onend = () => {
-      btn.classList.remove("recording");
-      btn.textContent = "🎤";
-      target.value = base.substring(0, pos) + finalText + base.substring(pos);
-      target.setSelectionRange(pos + finalText.length, pos + finalText.length);
-      target.focus();
-      recognition = null;
-    };
-    rec.onerror = (e) => { console.warn("Speech error:", e.error); stopRecording(); };
-    recognition = rec;
-    btn.classList.add("recording");
-    btn.textContent = "⏹";
-    rec.start();
+    rec.onend = () => { stopRecording(); target.value = base.substring(0, pos) + finalText + base.substring(pos); target.setSelectionRange(pos + finalText.length, pos + finalText.length); target.focus(); };
+    rec.onerror = () => stopRecording();
+    recognition = rec; btn.classList.add("recording"); btn.textContent = "⏹"; rec.start();
   });
-
   btn.addEventListener("dblclick", (e) => {
     e.preventDefault();
     lang = lang === "en-US" ? "zh-CN" : "en-US";
     btn.title = `Voice input (${lang === "en-US" ? "English" : "中文"}) — double-click to switch`;
     if (recognition) { stopRecording(); setTimeout(() => btn.click(), 300); }
   });
-})();
+}
+initVoiceInput("ai-voice-btn", "ai-input");
+initVoiceInput("node-ai-voice-btn", "node-ai-input");
 
 // Load AI chat history when switching chapters
 const _origOpenChapter = openChapterInEditor;
