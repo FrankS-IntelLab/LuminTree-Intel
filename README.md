@@ -1,40 +1,68 @@
 # LuminTree-Intel
 
-AI-powered novel creation studio — a standalone web app with a 4-panel layout for structured worldbuilding, plot design, character profiling, chapter management, and AI-assisted writing. Built for fiction writers who think in trees.
+**Intelligence Applied — Structured creative simulation through AI-assisted novel creation.**
+
+## Why a Novel Writing Tool in an Intelligence Lab?
+
+We see intelligence as a two-way process:
+
+- **Intelligence In** — absorbing, organizing, and storing knowledge (study, research, reading)
+- **Intelligence Out** — applying knowledge to construct coherent, functioning systems (creation, simulation, design)
+
+Some read novel creation as art. Some read it as self-exploration. We read it as the **application side of intelligence**.
+
+Novel creation is one of the most demanding forms of intelligence application. It requires you to:
+
+- Define a world with consistent rules (system architecture)
+- Create agents with internal logic and constraints (entity modeling)
+- Design interactions that produce emergent outcomes (relationship dynamics)
+- Maintain consistency across thousands of decisions (state management)
+- Iterate based on feedback (testing and refinement)
+
+That's not just art — that's engineering a simulation. The fact that the output is prose doesn't change the underlying cognitive process.
+
+**LuminTree-Intel** is our tool for exploring this applied side of intelligence. A standalone web app with a 4-panel layout for structured worldbuilding, plot design, character profiling, chapter management, and AI-assisted writing.
+
+## System Architecture (The 6-Category Tree)
+
+The tree isn't organized by writing craft categories. It's organized by **system components** — an intelligence architecture for creative simulation:
+
+```
+📖 Core Concept        → The thesis: genre, theme, logline, core conflict
+🌍 Worldview Setting   → The system: world rules, geography, magic, history, factions
+📐 Plot Framework      → The causal logic: story arcs, turning points, subplots
+👤 Character Profiles  → The agents: bios, motivations, relationships, behavioral boundaries
+📑 Chapter Structure   → The execution plan: outlines, scenes, pacing, POV assignments
+🗂 Writing Materials   → The interface layer: style directives, references, research notes
+```
 
 ## Features
 
-- **4-panel layout** — Left (tree structure), Middle (editor + AI assistant), Right (chapters), Far-right (AI Writer)
-- **Fixed 6-category creative tree** — Structured hierarchy for novel development:
-  - 📖 Core Concept & Story Positioning
-  - 🌍 Worldview Setting
-  - 📐 Plot Framework
-  - 👤 Character Profile Library
-  - 📑 Chapter Structure
-  - 🗂 Writing Material Library
-- **Category-aware AI assistant** — Each category has a specialized AI prompt; click the 🤖 AI Assistant tab in the middle panel to refine any section with AI help
-- **AI Writer** — Dedicated panel for AI-powered chapter writing that strictly follows your Writing Material Library style directives
-- **Use as Draft** — Select the best AI Writer output and push it directly into the chapter editor
+- **4-panel resizable layout** — Tree (structure) · Editor + AI Assistant (refinement) · Chapters (execution) · AI Writer (generation)
+- **Category-aware AI assistant** — Each category has a specialized AI prompt. Ask about characters → character expert. Ask about plot → plot expert.
+- **AI Writer** — Dedicated panel that reads all your settings and strictly follows your Writing Material Library style directives. No drift, no breaking character.
+- **Use as Draft** — One click to push AI output into the chapter editor
+- **Voice input** — Chinese/English speech-to-text for all AI chat inputs. Double-click 🎤 to switch language.
+- **Smart Import** — Feed it any file (JSON, TXT, MD) — even messy formats — and AI auto-classifies content into the correct categories
+- **Compile & Export** — One-click compile all chapters into Markdown or PDF with automatic chapter pagination
+- **Two-way chapter sync** — Chapter Structure tree and Chapters panel always stay linked
+- **Drag & drop** — Rearrange tree node relationships by dragging
+- **Persistent AI history** — Conversations saved per node and per chapter
 - **Clear Memory** — Reset AI Writer conversation per chapter for a fresh start
-- **Two-way chapter sync** — Chapter Structure (left tree) and Chapters panel (right) are always linked
-- **Drag & drop** — Rearrange parent-child relationships in the tree by dragging nodes
-- **Resizable panels** — Drag the handles between all 4 panels to adjust sizes
-- **Smart Import** — Import any file (JSON, TXT, MD) with AI-powered transformation to match the app's category structure
-- **Chapter Import** — Import chapters from any format into Chapter Structure with AI extraction
-- **JSON export/import** — Full project export including tree, chapters, and AI chat history
-- **Persistent AI chat history** — Conversations saved per node and per chapter
-- **Configurable LLM** — Bring your own API key; presets for DashScope (Qwen) and OpenAI
+- **Full JSON export/import** — Complete project backup including tree, chapters, and all AI chat history
+- **Local-first** — All data in localStorage, nothing uploaded, your story stays yours
+- **Bring your own API key** — Presets for DashScope (Qwen) and OpenAI, or any compatible endpoint
 
 ## Quick Start
 
 1. Clone this repo
-2. Open `index.html` in your browser (or serve via `python3 -m http.server 8080` for full features)
-3. Click ⚙️ to configure your AI API settings
-4. Start building your novel structure in the left panel
+2. Open `index.html` in your browser (or `python3 -m http.server 8080` for voice input support)
+3. Click ⚙️ to configure your AI API
+4. Start building your simulation
 
 ## Configure LLM
 
-Click the ⚙️ icon:
+Click ⚙️:
 
 | Field | Example |
 |---|---|
@@ -43,41 +71,13 @@ Click the ⚙️ icon:
 | API Key | Your API key |
 | Model | `qwen-plus`, `gpt-4o-mini`, etc. |
 
-Any OpenAI-compatible API endpoint works.
-
-## Usage
-
-1. **Build your novel structure** — Click any category in the left panel, use "+" to add child nodes, write notes in the editor
-2. **Refine with AI** — Switch to the 🤖 AI Assistant tab to get category-specific AI help for any node
-3. **Manage chapters** — Create chapters in the right panel or import them via the 📂 button on Chapter Structure
-4. **Write with AI** — Select a chapter, then use the AI Writer panel to generate content
-5. **Select drafts** — Click "📋 Use as Draft" on good AI output to push it into the chapter editor
-6. **Export/Import** — Use 💾 JSON export to save your project, 📂 Import to restore, or 🧠 Smart Import for any format
-
-## Creative Tree Structure
-
-```
-📖 Core Concept & Story Positioning
-  └── Genre, theme, logline, target audience, core conflict
-🌍 Worldview Setting
-  └── World rules, geography, magic systems, history, factions
-📐 Plot Framework
-  └── Story arcs, turning points, act structure, subplots
-👤 Character Profile Library
-  └── Character bios, motivations, relationships, boundaries
-📑 Chapter Structure
-  └── Chapter outlines, scene breakdowns, pacing, POV
-🗂 Writing Material Library
-  └── Style directives, reference snippets, inspiration, research notes
-```
+Any OpenAI-compatible endpoint works.
 
 ## Tech Stack
 
-- Standalone Web App (HTML / CSS / JS)
+- Standalone Web App (HTML / CSS / JS) — zero backend, zero dependencies
 - localStorage for persistence
-- Marked (Markdown parsing, bundled locally)
-- Mermaid (flowchart rendering, bundled locally)
-- KaTeX (math rendering, bundled locally)
+- Marked · Mermaid · KaTeX (all bundled locally)
 
 ## Author
 
@@ -91,54 +91,71 @@ Any OpenAI-compatible API endpoint works.
 
 # LuminTree-Intel（中文说明）
 
-AI 驱动的小说创作工作室——一款独立 Web 应用，采用 4 面板布局，提供结构化的世界观构建、情节设计、角色档案、章节管理和 AI 辅助写作。为以树状思维创作的小说作者而建。
+**智能的应用侧 —— 通过 AI 辅助小说创作进行结构化创意仿真。**
+
+## 为什么一个智能实验室要做小说创作工具？
+
+我们把智能看作一个双向过程：
+
+- **智能输入** —— 吸收、组织、存储知识（学习、研究、阅读）
+- **智能输出** —— 运用知识构建连贯、自洽的系统（创作、仿真、设计）
+
+有人把小说创作看作艺术，有人看作自我探索，而我们把它看作**智能的应用侧**。
+
+小说创作是最具挑战性的智能应用形式之一，它要求你：
+
+- 定义一个规则自洽的世界（系统架构）
+- 创建具有内在逻辑和约束的角色（实体建模）
+- 设计产生涌现结果的交互（关系动力学）
+- 在成千上万个决策中保持一致性（状态管理）
+- 根据反馈迭代优化（测试与改进）
+
+这不仅仅是艺术——这是在工程化地构建一个仿真系统。输出恰好是文字，并不改变背后的认知过程。
+
+**LuminTree-Intel** 是我们探索智能应用侧的工具。一款独立 Web 应用，采用 4 面板布局，提供结构化的世界观构建、情节设计、角色建模、章节管理和 AI 辅助写作。
+
+## 系统架构（6 大分类树）
+
+这棵树不是按写作技巧分类的，而是按**系统组件**组织的——一个面向创意仿真的智能架构：
+
+```
+📖 核心设定    → 论题：类型、主题、核心冲突、目标读者
+🌍 世界观设定  → 系统：世界规则、地理、魔法体系、历史、势力
+📐 情节框架    → 因果逻辑：故事弧线、转折点、支线剧情
+👤 角色档案    → 智能体：人物传记、动机、关系网、行为边界
+📑 章节结构    → 执行计划：章节大纲、场景分解、节奏、视角
+🗂 写作素材    → 接口层：风格指令、参考片段、研究笔记
+```
 
 ## 功能
 
-- **4 面板布局** — 左（树结构）、中（编辑器 + AI 助手）、右（章节）、最右（AI 写手）
-- **固定 6 大类创作树** — 结构化的小说开发层级：
-  - 📖 核心设定与故事定位
-  - 🌍 世界观设定
-  - 📐 情节框架
-  - 👤 角色档案库
-  - 📑 章节结构
-  - 🗂 写作素材库
-- **分类感知 AI 助手** — 每个类别有专属 AI 提示词；在中间面板点击 🤖 AI 助手标签，获取针对性 AI 辅助
-- **AI 写手** — 专用面板，严格遵循写作素材库中的风格指令进行 AI 章节写作
-- **用作草稿** — 选择最佳 AI 输出，直接推送到章节编辑器
-- **清除记忆** — 按章节重置 AI 写手对话，重新开始
-- **双向章节同步** — 章节结构（左树）与章节面板（右）始终保持链接
-- **拖拽排序** — 通过拖拽节点调整树中的父子关系
-- **可调面板** — 拖动 4 个面板之间的手柄调整大小
-- **智能导入** — 导入任意文件（JSON、TXT、MD），AI 自动转换为应用所需的分类结构
-- **章节导入** — 从任意格式导入章节到章节结构，支持 AI 提取
-- **JSON 导入/导出** — 完整项目导出，包含树、章节和 AI 聊天记录
-- **持久化 AI 聊天记录** — 按节点和章节保存对话
-- **可配置 LLM** — 自带 API Key；预设支持 DashScope（通义千问）和 OpenAI
+- **4 面板可调布局** —— 树结构 · 编辑器+AI助手 · 章节 · AI写手
+- **分类感知 AI 助手** —— 每个分类有专属提示词，问角色问题就是角色专家，问情节就是情节专家
+- **AI 写手** —— 读取所有设定，严格遵循写作素材库中的风格指令，不跑偏，不出戏
+- **一键用作草稿** —— AI 输出满意？一键推送到编辑器
+- **语音输入** —— 中英文语音转文字，双击 🎤 切换语言
+- **智能导入** —— JSON、TXT、MD 甚至乱格式，AI 自动分类到正确位置
+- **编译导出** —— 一键编译全书为 Markdown 或 PDF，每章自动分页
+- **双向章节同步** —— 章节结构树与章节面板始终保持链接
+- **拖拽排序** —— 拖拽调整树节点的父子关系
+- **持久化 AI 记录** —— 按节点和章节保存对话
+- **清除记忆** —— 按章节重置 AI 写手对话
+- **完整 JSON 导入/导出** —— 包含树、章节和所有 AI 聊天记录
+- **数据全在本地** —— localStorage 存储，不上传任何服务器
+- **自带 API Key** —— 支持通义千问、OpenAI 或任何兼容接口
 
 ## 快速开始
 
 1. 克隆本仓库
-2. 在浏览器中打开 `index.html`（或通过 `python3 -m http.server 8080` 启动本地服务以获取完整功能）
-3. 点击 ⚙️ 配置 AI API 设置
-4. 在左面板开始构建小说结构
-
-## 使用方法
-
-1. **构建小说结构** — 点击左面板中的任意类别，使用 "+" 添加子节点，在编辑器中写笔记
-2. **AI 辅助优化** — 切换到 🤖 AI 助手标签，获取分类专属的 AI 帮助
-3. **管理章节** — 在右面板创建章节，或通过章节结构上的 📂 按钮导入
-4. **AI 写作** — 选择章节，然后使用 AI 写手面板生成内容
-5. **选择草稿** — 点击好的 AI 输出上的 "📋 Use as Draft" 推送到章节编辑器
-6. **导入/导出** — 使用 💾 JSON 导出保存项目，📂 导入恢复，或 🧠 智能导入处理任意格式
+2. 浏览器打开 `index.html`（或 `python3 -m http.server 8080` 以支持语音输入）
+3. 点击 ⚙️ 配置 AI API
+4. 开始构建你的仿真系统
 
 ## 技术栈
 
-- 独立 Web 应用（HTML / CSS / JS）
+- 独立 Web 应用（HTML / CSS / JS）—— 零后端，零依赖
 - localStorage 持久化存储
-- Marked（Markdown 解析，本地打包）
-- Mermaid（流程图渲染，本地打包）
-- KaTeX（数学公式渲染，本地打包）
+- Marked · Mermaid · KaTeX（均本地打包）
 
 ## 作者
 
