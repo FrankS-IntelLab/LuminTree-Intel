@@ -211,19 +211,8 @@ function collectNodes(node, out = []) {
   return out;
 }
 
-let lastReadIds = new Set();
-let prevReadIds = new Set();
-
 function renderTree() {
   treeEl.innerHTML = "";
-  lastReadIds = new Set();
-  prevReadIds = new Set();
-  for (const root of nodes) {
-    const all = collectNodes(root);
-    all.sort((a, b) => (b.lastAccessedAt || b.timestamp || "").localeCompare(a.lastAccessedAt || a.timestamp || ""));
-    if (all[0]) lastReadIds.add(all[0].id);
-    if (all[1]) prevReadIds.add(all[1].id);
-  }
   const indicator = document.getElementById("pin-indicator");
   if (indicator) indicator.remove();
   if (targetParentId) {
@@ -257,7 +246,6 @@ function renderNodeEl(node, depth) {
   const row = document.createElement("div");
   row.className = "tree-row"
     + (node.id === targetParentId ? " pinned" : "")
-    + (lastReadIds.has(node.id) ? " last-read" : prevReadIds.has(node.id) ? " prev-read" : "")
     + (node.isCategory ? " category-root" : "");
 
   // Drag-and-drop for rearranging parent-child relationships
@@ -397,7 +385,6 @@ function openChat(nodeId) {
   if (!node) return;
   activeNodeId = nodeId;
   activeChapterId = null; // deselect chapter
-  node.lastAccessedAt = new Date().toISOString();
   saveTree();
   renderChapters();
 
