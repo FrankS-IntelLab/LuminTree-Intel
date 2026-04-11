@@ -1007,23 +1007,44 @@ document.getElementById("editor-save").addEventListener("click", () => {
   setTimeout(() => btn.textContent = orig, 1500);
 });
 
-// Compile all chapters into one Markdown file
-document.getElementById("compile-novel").addEventListener("click", () => {
+// Compile all chapters into Markdown
+function compileNovelMd() {
   const csRoot = findNode("chapter-structure");
-  if (!csRoot || !csRoot.children.length) { alert("No chapters to compile."); return; }
+  if (!csRoot || !csRoot.children.length) { alert("No chapters to compile."); return null; }
   let md = "";
   for (const child of csRoot.children) {
     const ch = chapters.find(c => c.id === child.chapterId);
     if (!ch) continue;
     md += `# ${ch.title}\n\n${ch.content || ""}\n\n`;
   }
-  if (!md.trim()) { alert("All chapters are empty."); return; }
-  const blob = new Blob([md.trim()], { type: "text/markdown" });
+  if (!md.trim()) { alert("All chapters are empty."); return null; }
+  return md.trim();
+}
+
+// Download as .md
+document.getElementById("compile-novel-md").addEventListener("click", () => {
+  const md = compileNovelMd();
+  if (!md) return;
+  const blob = new Blob([md], { type: "text/markdown" });
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = "novel.md";
   a.click();
   URL.revokeObjectURL(a.href);
+});
+
+// Print/Save as PDF (uses browser print dialog)
+document.getElementById("compile-novel-pdf").addEventListener("click", () => {
+  const md = compileNovelMd();
+  if (!md) return;
+  const html = marked.parse(md);
+  const win = window.open("", "_blank");
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Novel</title>
+<style>body{font-family:serif;max-width:700px;margin:40px auto;padding:0 20px;line-height:1.8;color:#222}
+h1{page-break-before:always;margin-top:2em}h1:first-child{page-break-before:avoid}
+@media print{body{margin:0;padding:0}}</style></head><body>${html}</body></html>`);
+  win.document.close();
+  setTimeout(() => win.print(), 500);
 });
 
 // === Middle Panel Tabs (Editor / AI Assistant) ===
