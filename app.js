@@ -1041,8 +1041,9 @@ document.getElementById("compile-novel-pdf").addEventListener("click", () => {
   const win = window.open("", "_blank");
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Novel</title>
 <style>body{font-family:serif;max-width:700px;margin:40px auto;padding:0 20px;line-height:1.8;color:#222}
-h1{page-break-before:always;margin-top:2em}h1:first-child{page-break-before:avoid}
-@media print{body{margin:0;padding:0}}</style></head><body>${html}</body></html>`);
+h1{page-break-before:always;margin-top:2em}
+.title-page{height:100vh;display:flex;align-items:center;justify-content:center}
+@media print{body{margin:0;padding:0}}</style></head><body><div class="title-page"></div>${html}</body></html>`);
   win.document.close();
   setTimeout(() => win.print(), 500);
 });
