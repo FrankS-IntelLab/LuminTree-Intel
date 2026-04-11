@@ -1007,6 +1007,25 @@ document.getElementById("editor-save").addEventListener("click", () => {
   setTimeout(() => btn.textContent = orig, 1500);
 });
 
+// Compile all chapters into one Markdown file
+document.getElementById("compile-novel").addEventListener("click", () => {
+  const csRoot = findNode("chapter-structure");
+  if (!csRoot || !csRoot.children.length) { alert("No chapters to compile."); return; }
+  let md = "";
+  for (const child of csRoot.children) {
+    const ch = chapters.find(c => c.id === child.chapterId);
+    if (!ch) continue;
+    md += `# ${ch.title}\n\n${ch.content || ""}\n\n`;
+  }
+  if (!md.trim()) { alert("All chapters are empty."); return; }
+  const blob = new Blob([md.trim()], { type: "text/markdown" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "novel.md";
+  a.click();
+  URL.revokeObjectURL(a.href);
+});
+
 // === Middle Panel Tabs (Editor / AI Assistant) ===
 const tabEditor = document.getElementById("tab-editor");
 const tabAi = document.getElementById("tab-ai");
