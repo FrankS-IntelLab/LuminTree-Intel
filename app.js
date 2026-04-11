@@ -1328,6 +1328,7 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
   function stopRecording() {
     if (recognition) { try { recognition.abort(); } catch(e) {} }
     btn.classList.remove("recording");
+    btn.textContent = "🎤";
     recognition = null;
   }
 
@@ -1352,6 +1353,7 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
     };
     rec.onend = () => {
       btn.classList.remove("recording");
+      btn.textContent = "🎤";
       target.value = base.substring(0, pos) + finalText + base.substring(pos);
       target.setSelectionRange(pos + finalText.length, pos + finalText.length);
       target.focus();
@@ -1360,6 +1362,7 @@ document.getElementById("ai-clear-btn").addEventListener("click", () => {
     rec.onerror = (e) => { console.warn("Speech error:", e.error); stopRecording(); };
     recognition = rec;
     btn.classList.add("recording");
+    btn.textContent = "⏹";
     rec.start();
   });
 
